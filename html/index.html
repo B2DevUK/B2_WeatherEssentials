@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Voting System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+        }
+        .bg-neutral-800 {
+            background-color: #272727;
+        }
+        .bg-neutral-600 {
+            background-color: #353535;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+</head>
+<body class="text-white">
+    <div id="app" v-if="votingActive" class="fixed top-1/3 right-0 p-2 bg-neutral-800 shadow-lg rounded-lg w-1/6">
+        <div class="text-center mb-2">
+            <h2 class="text-lg font-bold mb-1">Weather Voting</h2>
+            <p class="text-xs">Voting ends in:</p>
+            <p class="text-md font-bold">{{ timer }}</p>
+            <p class="text-xs mt-2">Weather Options: Clear, Extrasunny, Clouds, Overcast, Rain, Clearing, Thunder, Smog, Foggy, Xmas, Snowlight, or Blizzard </p>
+            <p class="text-xs mt-2">To vote, type:</p>
+            <p class="text-sm font-bold">/weathervote [weather]</p>
+        </div>
+        <div class="bg-neutral-600 p-2 rounded-lg">
+            <ul>
+                <li v-for="(count, weather) in votes" :key="weather" class="flex justify-between mb-1">
+                    <span>{{ weather }}</span>
+                    <span>{{ count }}</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                votingActive: false,
+                timer: '',
+                votes: {},
+                weatherTypes: [],
+                blacklist: []
+            },
+            methods: {
+                handleMessage(event) {
+                    const { action, sound, votes, duration, weatherTypes, blacklist } = event.data;
+                    if (action === 'playSound') {
+                        this.playSound(sound);
+                    } else if (action === 'startVoting') {
+                        this.votingActive = true;
+                        this.votes = {};
+                        this.weatherTypes = weatherTypes;
+                        this.blacklist = blacklist;
+                        this.startTimer(duration * 60);
+                    } else if (action === 'updateVotes') {
+                        this.votes = votes;
+                    } else if (action === 'endVoting') {
+                        this.votingActive = false;
+                    }
+                },
+                playSound(soundFile) {
+                    const audio = new Audio(`./sounds/${soundFile}`);
+                    audio.volume = 0.5; // Adjust volume as needed
+                    audio.play();
+                },
+                startTimer(duration) {
+                    let timer = duration;
+                    const interval = setInterval(() => {
+                        const minutes = Math.floor(timer / 60);
+                        const seconds = timer % 60;
+                        this.timer = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                        if (--timer < 0) {
+                            clearInterval(interval);
+                            this.votingActive = false;
+                        }
+                    }, 1000);
+                }
+            },
+            created() {
+                window.addEventListener('message', this.handleMessage);
+            },
+            beforeDestroy() {
+                window.removeEventListener('message', this.handleMessage);
+            }
+        });
+    </script>
+</body>
+</html>

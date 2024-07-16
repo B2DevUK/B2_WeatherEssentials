@@ -1,101 +1,88 @@
-# B2 Weather Essentials for FiveM
+# b2_weatherEssentials
 
 ## Description
-B2 Weather Essentials is a dynamic weather system for FiveM that allows for synchronized weather changes across all players on the server. The system includes various weather options, chances of each weather type happening, intervals for weather changes, admin commands to manually change the weather, and an option to sync in-game weather with real-world weather using the Open-Meteo API.
+b2_weatherEssentials is an advanced, dynamic weather system for FiveM servers. It offers a range of features including regional weather, extreme weather events, blackouts, and a voting system for weather changes. This script enhances the immersion and realism of your FiveM server by providing a diverse and interactive weather experience.
+
+## Version
+1.1.0
+
+## Author
+B2DevUK | B2 Scripts
 
 ## Features
-- **Weather Options**: Supports all possible FiveM weather types.
-- **Weather Chances**: Configurable chances for each weather type.
-- **Intervals of Weather Changes**: Configurable intervals for automatic weather changes.
-- **Admin Commands**: Commands for admins to manually change the weather.
-- **Live Local Weather**: Syncs in-game weather with real-world weather using the Open-Meteo API.
+- Dynamic weather changes
+- Regional weather system
+- Extreme weather events (earthquakes, storms, extreme cold/heat, tsunamis)
+- Blackout system
+- Weather voting system
+- Live weather integration (optional)
+- Time & Weather synchronization
+- Admin commands for weather and time control
+- Integration with b2_vehicleEssentials for weather-based driving styles
+- Customizable configuration
 
 ## Installation
-1. **Clone the repository** or **download the files** and place them in your FiveM server resources folder.
-2. **Add the resource** to your `server.cfg`:
-    ```plaintext
-    ensure b2_weatherEssentials
-    ```
+1. Download the b2_weatherEssentials script.
+2. Place the script in your FiveM server's resources folder.
+3. Add `ensure b2_weatherEssentials` to your server.cfg file.
+4. Configure the script by editing the `config.lua` file.
 
 ## Configuration
-Modify the `config.lua` file to set up the weather types, chances, intervals, and API settings.
+The `config.lua` file allows you to customize various aspects of the script:
 
-### `config.lua`
-```lua
-Config = {}
+- Weather types and their chances
+- Weather change intervals
+- Regional weather settings
+- Blackout settings
+- Voting system settings
+- Extreme event settings
+- Debugging options
+- And more...
 
--- Define all possible weather types
-Config.WeatherTypes = {
-    "CLEAR", "EXTRASUNNY", "CLOUDS", "OVERCAST", "RAIN", "CLEARING",
-    "THUNDER", "SMOG", "FOGGY", "XMAS", "SNOWLIGHT", "BLIZZARD"
-}
+## Usage
 
--- Define chances for each weather type (sum should be 100)
-Config.WeatherChances = {
-    CLEAR = 20, EXTRASUNNY = 15, CLOUDS = 10, OVERCAST = 10, RAIN = 10,
-    CLEARING = 5, THUNDER = 5, SMOG = 5, FOGGY = 5, XMAS = 5, SNOWLIGHT = 5, BLIZZARD = 5
-}
+### Player Commands
+- `/weathervote [WEATHER_TYPE]`: Vote for a weather type during active voting sessions.
+- `!WEATHER_TYPE`: Quick vote for a weather type in chat (e.g., !CLEAR, !RAIN).
 
--- Define interval for weather changes (in minutes)
-Config.WeatherChangeInterval = 30
-
--- Live local weather API
-Config.UseLiveWeather = true
-Config.Latitude = "your_latitude"
-Config.Longitude = "your_longitude"
-```
-Replace `your_latitude` and `your_longitude` with the actual coordinates of the location where your server is based.
-
-## Commands
 ### Admin Commands
-- **`/setweather [weather]`**: Manually sets the weather to the specified type.
-    - Example: `/setweather CLEAR`
-    - Requires the user to have the `command.setweather` ACE permission.
+- `/setweather [WEATHER_TYPE] [REGION]`: Set the weather (and optionally for a specific region).
+- `/settime [HOURS] [MINUTES]`: Set the server time.
+- `/blackout`: Trigger a blackout.
+- `/clearblackout`: Clear an active blackout.
+- `/extremeevent [EVENT_TYPE]`: Trigger an extreme weather event.
+- `/clearextremeevent`: Clear an active extreme weather event.
+- `/forcevote`: Force start a weather voting session.
 
-## API Exports
-The dynamic weather system includes API exports that allow other scripts to change the weather and get the current active weather.
+## Exports
+The script provides the following exports for integration with other resources:
 
-### `SetWeather(weather)`
-- **Description**: Sets the weather to the specified type.
-- **Parameter**: `weather` - A string representing the weather type (must be one of the defined weather types in `Config.WeatherTypes`).
-- **Usage**:
-    ```lua
-    exports['b2_weatherEssentials']:SetWeather('RAIN')
-    ```
+- `SetWeather(weather, region)`: Set the weather (optionally for a specific region).
+- `GetCurrentWeather(region)`: Get the current weather (optionally for a specific region).
+- `TriggerBlackout()`: Trigger a blackout.
+- `ClearBlackout()`: Clear an active blackout.
+- `TriggerExtremeEvent(event)`: Trigger an extreme weather event.
+- `ClearExtremeEvent()`: Clear an active extreme weather event.
 
-### `GetCurrentWeather()`
-- **Description**: Gets the currently active weather.
-- **Returns**: A string representing the current weather type.
-- **Usage**:
-    ```lua
-    local currentWeather = exports['b2_weatherEssentials']:GetCurrentWeather()
-    print("Current Weather: " .. currentWeather)
-    ```
+## Integration
+b2_weatherEssentials integrates with b2_vehicleEssentials to adjust NPC driving styles based on weather conditions. Ensure you have b2_vehicleEssentials installed and set `Config.UsingVehicleEssentials = true` in the configuration file.
 
-## Example Usage
-### Setting Weather from Another Script
-```lua
--- Example script to set the weather to THUNDER
-Citizen.CreateThread(function()
-    Wait(10000) -- Wait for 10 seconds
-    exports['b2_weatherEssentials']:SetWeather('THUNDER')
-end)
-```
+## Live Weather
+To use live weather data, set `Config.UseLiveWeather = true` and provide your latitude and longitude in the configuration file. This feature uses the Open-Meteo API to fetch real-world weather data.
 
-### Getting Current Weather from Another Script
-```lua
--- Example script to print the current weather to the console
-Citizen.CreateThread(function()
-    Wait(10000) -- Wait for 10 seconds
-    local currentWeather = exports['b2_weatherEssentials']:GetCurrentWeather()
-    print("Current Weather: " .. currentWeather)
-end)
-```
+## Customization
+You can customize weather types, chances, intervals, and more in the `config.lua` file. The script also supports custom sounds for various weather events, which can be added to the `html/sounds/` directory.
+
+## Dependencies
+- FiveM server
+- b2_vehicleEssentials (optional, for enhanced NPC driving behavior)
+
+## Support
+For support, join our Discord server: [B2Scripts](https://discord.gg/KZRBA6H5kR)
 
 ## License
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+MIT License
 
-## Credits
-Created by B2DevUK | B2 Scripts. Contributions and improvements are welcome.
-
-## Support Discord: discord.gg/KZRBA6H5kR
+## Changelog
+- 1.1.0: Added regional weather system, extreme weather events & voting system.
+- 1.0.0: Initial release with basic weather
