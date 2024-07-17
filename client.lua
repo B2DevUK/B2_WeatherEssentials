@@ -9,6 +9,7 @@
 -- Variables
 -- ===============================================
 
+local weatherSyncEnabled = true
 local currentWeather = "CLEAR"
 local regionWeather = {City = "CLEAR", Sandy = "CLEAR", Paleto = "CLEAR"}
 
@@ -461,3 +462,21 @@ Citizen.CreateThread(function()
         end
     end
 end)
+
+-- ===============================================
+-- Exports & Weather Sync
+-- ===============================================
+
+-- Function to enable weather sync
+function EnableWeatherSync()
+    weatherSyncEnabled = true
+end
+
+-- Function to disable weather sync
+function DisableWeatherSync()
+    weatherSyncEnabled = false
+end
+
+-- Register the exports
+exports('EnableWeatherSync', EnableWeatherSync)
+exports('DisableWeatherSync', DisableWeatherSync)
