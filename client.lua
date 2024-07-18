@@ -10,6 +10,7 @@
 -- ===============================================
 
 local weatherSyncEnabled = true
+local timeSyncEnabled = true
 local currentWeather = "CLEAR"
 local regionWeather = {City = "CLEAR", Sandy = "CLEAR", Paleto = "CLEAR"}
 
@@ -66,7 +67,7 @@ end
 -- Weather Update
 RegisterNetEvent('updateWeather')
 AddEventHandler('updateWeather', function(newWeather, transitionTime)
-    if not extremeEvent then
+    if not extremeEvent and weatherSyncEnabled then
         currentWeather = newWeather
         SetWeatherTypeOverTime(newWeather, transitionTime)
         Citizen.CreateThread(function()
@@ -85,7 +86,7 @@ end)
 -- Regional Weather Update
 RegisterNetEvent('updateRegionalWeather')
 AddEventHandler('updateRegionalWeather', function(newRegionWeather, transitionTime)
-    if not extremeEvent then
+    if not extremeEvent and weatherSyncEnabled then
         regionWeather = newRegionWeather
         local playerCoords = GetEntityCoords(PlayerPedId())
         for region, data in pairs(Config.Regions) do
@@ -399,6 +400,13 @@ AddEventHandler('setTimeOfDay', function(hours, minutes)
     NetworkOverrideClockTime(hours, minutes, 0)
 end)
 
+RegisterNetEvent('updateTime')
+AddEventHandler('updateTime', function(hours, minutes)
+    if timeSyncEnabled then
+        NetworkOverrideClockTime(hours, minutes, 0)
+    end
+end)
+
 -- Weather & Time Sync Functions
 -- ===============================================
 
@@ -477,6 +485,18 @@ function DisableWeatherSync()
     weatherSyncEnabled = false
 end
 
+-- Function to enable time sync
+function EnableTimeSync()
+    timeSyncEnabled = true
+end
+
+-- Function to disable time sync
+function DisableTimeSync()
+    timeSyncEnabled = false
+end
+
 -- Register the exports
 exports('EnableWeatherSync', EnableWeatherSync)
 exports('DisableWeatherSync', DisableWeatherSync)
+exports('EnableTimeSync', EnableTimeSync)
+exports('DisableTimeSync', DisableTimeSync)

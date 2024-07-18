@@ -21,6 +21,10 @@ local votedPlayers = {}
 
 local currentServerTime = {hours = 12, minutes = 0}
 
+local weatherSyncEnabled = true
+local timeSyncEnabled = true
+local timeSyncInterval = (Config.TimeScale * 60 * 1000) / 1440
+
 -- ===============================================
 -- Sync Functions
 -- ===============================================
@@ -48,6 +52,11 @@ function table.contains(table, element)
         end
     end
     return false
+end
+
+local function getRealWorldTime()
+    local realTime = os.date('*t')
+    return realTime.hour, realTime.min
 end
 
 -- ===============================================
@@ -155,6 +164,30 @@ function GetCurrentWeather(region)
     end
     debugPrint("Export: Getting global weather: " .. currentWeather)
     return currentWeather
+end
+
+-- Exported function to enable weather sync
+function EnableWeatherSync()
+    weatherSyncEnabled = true
+    debugPrint("Weather sync enabled")
+end
+
+-- Exported function to disable weather sync
+function DisableWeatherSync()
+    weatherSyncEnabled = false
+    debugPrint("Weather sync disabled")
+end
+
+-- Exported function to enable time sync
+function EnableTimeSync()
+    timeSyncEnabled = true
+    debugPrint("Time sync enabled")
+end
+
+-- Exported function to disable time sync
+function DisableTimeSync()
+    timeSyncEnabled = false
+    debugPrint("Time sync disabled")
 end
 
 -- Blackout Functions
@@ -282,13 +315,26 @@ end)
 -- Function to update server time
 Citizen.CreateThread(function()
     while true do
-        Citizen.Wait(60000)
-        currentServerTime.minutes = currentServerTime.minutes + 1
-        if currentServerTime.minutes >= 60 then
-            currentServerTime.hours = (currentServerTime.hours + 1) % 24
-            currentServerTime.minutes = 0
+        if Config.UseRealTime then
+            local hours, minutes = getRealWorldTime()
+            currentServerTime.hours = hours
+            currentServerTime.minutes = minutes
+        else
+            Citizen.Wait(timeSyncInterval)
+            currentServerTime.minutes = currentServerTime.minutes + 1
+            if currentServerTime.minutes >= 60 then
+                currentServerTime.hours = (currentServerTime.hours + 1) % 24
+                currentServerTime.minutes = 0
+            end
         end
-        TriggerClientEvent('setTimeOfDay', -1, currentServerTime.hours, currentServerTime.minutes)
+
+        if timeSyncEnabled then
+            TriggerClientEvent('setTimeOfDay', -1, currentServerTime.hours, currentServerTime.minutes)
+        end
+
+        if Config.UseRealTime then
+            Citizen.Wait(60000) -- Update every minute if using real-time sync
+        end
     end
 end)
 
@@ -443,3 +489,7 @@ exports('TriggerBlackout', triggerBlackout)
 exports('ClearBlackout', clearBlackout)
 exports('TriggerExtremeEvent', triggerExtremeEvent)
 exports('ClearExtremeEvent', clearExtremeEvent)
+exports('EnableWeatherSync', EnableWeatherSync)
+exports('DisableWeatherSync', DisableWeatherSync)
+exports('EnableTimeSync', EnableTimeSync)
+exports('DisableTimeSync', DisableTimeSync)

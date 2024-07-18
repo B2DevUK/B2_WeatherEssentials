@@ -20,3 +20,8 @@ export 'SetWeather'
 export 'GetCurrentWeather'
 export 'TriggerBlackout'
 export 'ClearBlackout'
+export 'EnableWeatherSync'
+export 'DisableWeatherSync'
+export 'EnableTimeSync'
+export 'DisableTimeSync'
+

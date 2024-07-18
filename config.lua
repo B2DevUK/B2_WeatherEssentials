@@ -16,6 +16,11 @@ Config.WeatherChances = {
 -- Define interval for weather changes (in minutes)
 Config.WeatherChangeInterval = 30
 
+-- Timescale settings
+Config.TimeScale = 60 -- Ingame 24-hour period duration in real-world minutes
+-- OR
+Config.UseRealTime = true
+
 -- Live local weather API
 Config.UseLiveWeather = false
 Config.Latitude = "your_latitude"
