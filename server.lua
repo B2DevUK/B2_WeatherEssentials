@@ -266,7 +266,6 @@ local function handleVotingResults()
     votingActive = false
 
     TriggerClientEvent('endVoting', -1)
-    TriggerClientEvent('chat:addMessage', -1, {args = {"^2[Weather]", "Voting has ended. New weather: " .. (selectedWeather or randomWeather)}})
 end
 
 -- Handle player votes

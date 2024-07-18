@@ -67,6 +67,7 @@ end
 -- Weather Update
 RegisterNetEvent('updateWeather')
 AddEventHandler('updateWeather', function(newWeather, transitionTime)
+    transitionTime = transitionTime or 10.0
     if not extremeEvent and weatherSyncEnabled then
         currentWeather = newWeather
         SetWeatherTypeOverTime(newWeather, transitionTime)
