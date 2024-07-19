@@ -15,7 +15,7 @@ local currentWeather = "CLEAR"
 local regionWeather = {City = "CLEAR", Sandy = "CLEAR", Paleto = "CLEAR"}
 
 local isBlackout = false
-local extremeEvent = nil
+local currentExtremeEvent = nil
 local lightsState = false
 
 local votingActive = false
@@ -67,8 +67,7 @@ end
 -- Weather Update
 RegisterNetEvent('updateWeather')
 AddEventHandler('updateWeather', function(newWeather, transitionTime)
-    transitionTime = transitionTime or 10.0
-    if not extremeEvent and weatherSyncEnabled then
+    if not currentExtremeEvent then
         currentWeather = newWeather
         SetWeatherTypeOverTime(newWeather, transitionTime)
         Citizen.CreateThread(function()
@@ -87,7 +86,7 @@ end)
 -- Regional Weather Update
 RegisterNetEvent('updateRegionalWeather')
 AddEventHandler('updateRegionalWeather', function(newRegionWeather, transitionTime)
-    if not extremeEvent and weatherSyncEnabled then
+    if not currentExtremeEvent then
         regionWeather = newRegionWeather
         local playerCoords = GetEntityCoords(PlayerPedId())
         for region, data in pairs(Config.Regions) do
@@ -160,7 +159,7 @@ end)
 -- Earthquake Event
 RegisterNetEvent('triggerEarthquake')
 AddEventHandler('triggerEarthquake', function()
-    extremeEvent = "EARTHQUAKE"
+    currentExtremeEvent = "EARTHQUAKE"
 
     SendNUIMessage({
         action = 'playSound',
@@ -184,13 +183,13 @@ AddEventHandler('triggerEarthquake', function()
     end)
 
     Citizen.Wait(60000 - 10000)
-    extremeEvent = nil
+    currentExtremeEvent = nil
 end)
 
 -- Storm Event
 RegisterNetEvent('triggerStorm')
 AddEventHandler('triggerStorm', function()
-    extremeEvent = "STORM"
+    currentExtremeEvent = "STORM"
     SetWeatherTypeOverTime("THUNDER", 15.0)
     SetWeatherTypePersist("THUNDER")
     SetWeatherTypeNow("THUNDER")
@@ -204,7 +203,7 @@ AddEventHandler('triggerStorm', function()
     end
 
     Citizen.CreateThread(function()
-        while extremeEvent == "STORM" do
+        while currentExtremeEvent == "STORM" do
             Citizen.Wait(math.random(3000, 10000))
             if math.random(1, 100) > 70 then
                 local x = math.random(-1000, 1000)
@@ -216,13 +215,13 @@ AddEventHandler('triggerStorm', function()
     end)
 
     Citizen.Wait(60000)
-    extremeEvent = nil
+    currentExtremeEvent = nil
 end)
 
 -- Extreme Cold Event
 RegisterNetEvent('triggerExtremeCold')
 AddEventHandler('triggerExtremeCold', function()
-    extremeEvent = "EXTREME_COLD"
+    currentExtremeEvent = "EXTREME_COLD"
     SetWeatherTypeOverTime("XMAS", 15.0)
     SetWeatherTypePersist("XMAS")
     SetWeatherTypeNow("XMAS")
@@ -243,7 +242,7 @@ AddEventHandler('triggerExtremeCold', function()
     local particleHandle = StartParticleFxLoopedAtCoord(particleName, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 100.0, false, false, false, 0)
     
     Citizen.CreateThread(function()
-        while extremeEvent == "EXTREME_COLD" do
+        while currentExtremeEvent == "EXTREME_COLD" do
             Citizen.Wait(0)
             UseParticleFxAssetNextCall(particleDict)
             StartParticleFxLoopedAtCoord(particleName, GetEntityCoords(PlayerPedId()).x, GetEntityCoords(PlayerPedId()).y, GetEntityCoords(PlayerPedId()).z, 0.0, 0.0, 0.0, 100.0, false, false, false, 0)
@@ -252,20 +251,20 @@ AddEventHandler('triggerExtremeCold', function()
     end)
 
     Citizen.Wait(60000)
-    extremeEvent = nil
+    currentExtremeEvent = nil
 end)
 
 -- Extreme Heat Event
 RegisterNetEvent('triggerExtremeHeat')
 AddEventHandler('triggerExtremeHeat', function()
-    extremeEvent = "EXTREME_HEAT"
+    currentExtremeEvent = "EXTREME_HEAT"
     SetWeatherTypeOverTime("EXTRASUNNY", 15.0)
     SetWeatherTypePersist("EXTRASUNNY")
     SetWeatherTypeNow("EXTRASUNNY")
     SetWeatherTypeNowPersist("EXTRASUNNY")
 
     Citizen.CreateThread(function()
-        while extremeEvent == "EXTREME_HEAT" do
+        while currentExtremeEvent == "EXTREME_HEAT" do
             Citizen.Wait(0)
             SetTimecycleModifier("REDMIST_blend")
             SetTimecycleModifierStrength(0.5)
@@ -274,13 +273,13 @@ AddEventHandler('triggerExtremeHeat', function()
     end)
 
     Citizen.Wait(60000) 
-    extremeEvent = nil
+    currentExtremeEvent = nil
 end)
 
 -- Tsunami Event
 RegisterNetEvent('triggerTsunami')
 AddEventHandler('triggerTsunami', function()
-    extremeEvent = "TSUNAMI"
+    currentExtremeEvent = "TSUNAMI"
 
     -- Stage 1: Screen shake effect
     ShakeGameplayCam("LARGE_EXPLOSION_SHAKE", 1.0)
@@ -298,13 +297,13 @@ AddEventHandler('triggerTsunami', function()
     StopSound(sirenSoundId)
     ReleaseSoundId(sirenSoundId)
 
-    extremeEvent = nil
+    currentExtremeEvent = nil
 end)
 
 -- Clear Extreme Events
 RegisterNetEvent('clearExtremeEvent')
 AddEventHandler('clearExtremeEvent', function()
-    extremeEvent = nil
+    currentExtremeEvent = nil
     SetWindSpeed(0.0)
     ClearWeatherTypePersist()
     ClearOverrideWeather()
@@ -347,6 +346,7 @@ AddEventHandler('startVoting', function(duration, weatherTypes, blacklist)
         weatherTypes = weatherTypes,
         blacklist = blacklist
     })
+    votingActive = true
 end)
 
 RegisterNetEvent('endVoting')
@@ -355,10 +355,12 @@ AddEventHandler('endVoting', function()
     SendNUIMessage({
         action = 'endVoting'
     })
+    votingActive = false
 end)
 
 RegisterNetEvent('updateVotes')
 AddEventHandler('updateVotes', function(newVotes)
+    debugPrint("Received updateVotes event")
     SendNUIMessage({
         action = 'updateVotes',
         votes = newVotes
@@ -439,7 +441,7 @@ end)
 Citizen.CreateThread(function()
     while true do
         Citizen.Wait(10000)
-        if not extremeEvent then
+        if weatherSyncEnabled and not currentExtremeEvent then
             if Config.UseRegionalWeather then
                 local playerCoords = GetEntityCoords(PlayerPedId())
                 for region, data in pairs(Config.Regions) do

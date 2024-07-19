@@ -13,10 +13,10 @@ local currentWeather = "CLEAR"
 local regionWeather = {City = "CLEAR", Sandy = "CLEAR", Paleto = "CLEAR"}
 
 local isBlackout = false
+local currentExtremeEvent = nil
 
 local votingActive = false
 local voteCounts = {}
-local votingTimer = Config.VotingDuration * 60 * 1000
 local votedPlayers = {}
 
 local currentServerTime = {hours = 12, minutes = 0}
@@ -212,6 +212,7 @@ end
 
 -- Function to trigger an extreme event
 local function triggerExtremeEvent(event)
+    currentExtremeEvent = event
     debugPrint("Triggering extreme event: " .. event)
     if event == "EARTHQUAKE" then
         TriggerClientEvent('triggerEarthquake', -1)
@@ -230,8 +231,13 @@ end
 
 -- Function to clear an extreme event
 local function clearExtremeEvent()
+    currentExtremeEvent = nil
     debugPrint("Clearing extreme event")
     TriggerClientEvent('clearExtremeEvent', -1)
+end
+
+function GetCurrentExtremeWeather()
+    return currentExtremeEvent
 end
 
 -- Voting Functions
@@ -239,10 +245,12 @@ end
 
 -- Function to handle voting results
 local function handleVotingResults()
+    debugPrint("handleVotingResults called")
     local maxVotes = 0
     local weatherOptions = {}
 
     for weather, count in pairs(voteCounts) do
+        debugPrint("Weather: " .. weather .. ", Count: " .. count)
         if count > maxVotes then
             maxVotes = count
             weatherOptions = {weather}
@@ -251,14 +259,16 @@ local function handleVotingResults()
         end
     end
 
+    local selectedWeather
     if #weatherOptions > 0 then
-        local selectedWeather = weatherOptions[math.random(#weatherOptions)]
+        selectedWeather = weatherOptions[math.random(#weatherOptions)]
         debugPrint("Voting result: " .. selectedWeather)
         changeWeather(selectedWeather, nil, 30.0)
     else
         local randomWeather = getRandomWeather()
         debugPrint("No votes cast, selecting random weather: " .. randomWeather)
         changeWeather(randomWeather, nil, 30.0)
+        selectedWeather = randomWeather
     end
 
     voteCounts = {}
@@ -266,6 +276,7 @@ local function handleVotingResults()
     votingActive = false
 
     TriggerClientEvent('endVoting', -1)
+    TriggerClientEvent('chat:addMessage', -1, {args = {"^2[Weather]", "Voting has ended. New weather: " .. selectedWeather}})
 end
 
 -- Handle player votes
@@ -279,6 +290,7 @@ AddEventHandler('voteWeather', function(weather)
     end
 end)
 
+-- Handle player votes
 RegisterNetEvent('submitWeatherVote')
 AddEventHandler('submitWeatherVote', function(weatherType)
     local source = source
@@ -370,6 +382,7 @@ Citizen.CreateThread(function()
             debugPrint("Starting voting session")
             TriggerClientEvent('startVoting', -1, Config.VotingDuration, Config.WeatherTypes, Config.WeatherBlacklist)
             Citizen.Wait(Config.VotingDuration * 60000)
+            debugPrint("Voting session ended, handling results")
             handleVotingResults()
         end
     end
@@ -386,6 +399,9 @@ RegisterCommand('forcevote', function(source, args, rawCommand)
             votedPlayers = {}
             print("Force starting voting session")
             TriggerClientEvent('startVoting', -1, Config.VotingDuration, Config.WeatherTypes, Config.WeatherBlacklist)
+            Citizen.Wait(Config.VotingDuration * 60000)
+            debugPrint("Force voting session ended, handling results")
+            handleVotingResults()
         else
             TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Voting system is disabled!' } })
         end
@@ -492,3 +508,4 @@ exports('EnableWeatherSync', EnableWeatherSync)
 exports('DisableWeatherSync', DisableWeatherSync)
 exports('EnableTimeSync', EnableTimeSync)
 exports('DisableTimeSync', DisableTimeSync)
+exports('GetCurrentExtremeWeather', GetCurrentExtremeWeather)

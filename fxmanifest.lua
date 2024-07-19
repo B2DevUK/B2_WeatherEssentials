@@ -24,4 +24,5 @@ export 'EnableWeatherSync'
 export 'DisableWeatherSync'
 export 'EnableTimeSync'
 export 'DisableTimeSync'
+export 'GetCurrentExtremeWeather'
 

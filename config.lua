@@ -19,7 +19,7 @@ Config.WeatherChangeInterval = 30
 -- Timescale settings
 Config.TimeScale = 60 -- Ingame 24-hour period duration in real-world minutes
 -- OR
-Config.UseRealTime = true
+Config.UseRealTime = false
 
 -- Live local weather API
 Config.UseLiveWeather = false
@@ -55,7 +55,7 @@ Config.ExtremeEvents = {
     TSUNAMI = true
 }
 
-Config.UsingVehicleEssentials = true  -- Set this to false if not using the b2_vehicleEssentials script
+Config.UsingVehicleEssentials = false  -- Set this to false if not using the b2_vehicleEssentials script
 
 Config.WeatherDrivingStyles = {
     CLEAR = 786603,        -- Normal driving
