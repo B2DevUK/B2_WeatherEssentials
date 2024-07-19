@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'B2DevUK | B2 Scripts'
 description 'Dynamic Weather System for FiveM'
-version '1.1.0'
+version '1.1.1'
 
 server_script 'server.lua'
 client_script 'client.lua'
