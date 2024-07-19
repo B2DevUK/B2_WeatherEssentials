@@ -410,13 +410,18 @@ RegisterCommand('forcevote', function(source, args, rawCommand)
     end
 end, false)
 
+-- Function to capitalize the first letter of a string
+local function capitalize(str)
+    return (str:gsub("^%l", string.upper))
+end
+
 -- Command for admins to change weather
 RegisterCommand('setweather', function(source, args, rawCommand)
     if IsPlayerAceAllowed(source, "command.setweather") then
         local newWeather = args[1]:upper()
         if Config.WeatherTypes[newWeather] then
             if Config.UseRegionalWeather then
-                local region = args[2] and args[2]:capitalize()
+                local region = args[2] and capitalize(args[2])
                 if Config.Regions[region] then
                     changeWeather(newWeather, region)
                 else
@@ -433,6 +438,7 @@ RegisterCommand('setweather', function(source, args, rawCommand)
         TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'You do not have permission to use this command!' } })
     end
 end, false)
+
 
 -- Command for admins to change time
 RegisterCommand('settime', function(source, args, rawCommand)

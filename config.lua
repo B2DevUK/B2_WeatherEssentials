@@ -30,7 +30,7 @@ Config.Longitude = "your_longitude"
 Config.BlackoutEnabled = true
 
 -- Optional: Different weather for different regions
-Config.UseRegionalWeather = false
+Config.UseRegionalWeather = true
 Config.Regions = {
     City = {x = 0, y = 0, radius = 2000},  -- Define center and radius for the city
     Sandy = {x = 2000, y = 2000, radius = 1000},  -- Define center and radius for Sandy Shores
