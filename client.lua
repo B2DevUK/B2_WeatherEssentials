@@ -67,6 +67,7 @@ end
 -- Weather Update
 RegisterNetEvent('updateWeather')
 AddEventHandler('updateWeather', function(newWeather, transitionTime)
+    transitionTime = transitionTime or 15.0  -- Add default value for transitionTime
     if not currentExtremeEvent then
         currentWeather = newWeather
         SetWeatherTypeOverTime(newWeather, transitionTime)
@@ -86,6 +87,7 @@ end)
 -- Regional Weather Update
 RegisterNetEvent('updateRegionalWeather')
 AddEventHandler('updateRegionalWeather', function(newRegionWeather, transitionTime)
+    transitionTime = transitionTime or 15.0  -- Add default value for transitionTime
     if not currentExtremeEvent then
         regionWeather = newRegionWeather
         local playerCoords = GetEntityCoords(PlayerPedId())
@@ -109,6 +111,7 @@ AddEventHandler('updateRegionalWeather', function(newRegionWeather, transitionTi
         end
     end
 end)
+
 
 -- Blackout Functions
 -- ===============================================
