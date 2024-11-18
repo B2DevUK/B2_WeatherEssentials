@@ -1,10 +1,10 @@
-# b2_weatherEssentials v1.2.0
+# b2_weatherEssentials v1.3.0
 
 ## Description
 b2_weatherEssentials is an advanced, dynamic weather system for FiveM servers. It offers a range of features including regional weather, extreme weather events, blackouts, and a voting system for weather changes. This script enhances the immersion and realism of your FiveM server by providing a diverse and interactive weather experience.
 
 ## Version
-1.2.0
+1.3.0
 
 ## Author
 B2DevUK | B2 Scripts
@@ -98,6 +98,7 @@ For support, join our Discord server: [B2Scripts](https://discord.gg/KZRBA6H5kR)
 MIT License
 
 ## Changelog
+- 1.3.0: Fixed an issue causing vehicle lights to be effected & version control
 - 1.2.0: Added time scale customization and real-time server clock synchronization.
 - 1.1.0: Added regional weather system, extreme weather events & voting system.
 - 1.0.0: Initial release with basic weather

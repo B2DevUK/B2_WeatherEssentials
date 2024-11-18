@@ -150,9 +150,11 @@ AddEventHandler('startBlackout', function()
         while GetGameTimer() < endTime do
             lightsState = not lightsState
             SetArtificialLightsState(lightsState)
+            SetArtificialLightsStateAffectsVehicles(false)
             Citizen.Wait(math.random(200, 800))
         end
         SetArtificialLightsState(true)
+        SetArtificialLightsStateAffectsVehicles(false)
     end)
 end)
 
