@@ -4,7 +4,7 @@
 -- Date: 15/07/24
 -- Description: Server-side script for b2_weatherEssentials
 -- ===============================================
-local currentVersion = "1.3.0"
+local currentVersion = "1.3.5"
 -- GITHUB VERSION CHECK
 function fetchLatestVersion(callback)
     PerformHttpRequest("https://api.github.com/repos/B2DevUK/B2_WeatherEssentials/releases/latest", function(statusCode, response, headers)
@@ -201,7 +201,13 @@ end
 -- Exported function to enable weather sync
 function EnableWeatherSync()
     weatherSyncEnabled = true
-    debugPrint("Weather sync enabled")
+    -- Immediately sync current weather to all clients
+    if Config.UseRegionalWeather then
+        TriggerClientEvent('updateRegionalWeather', -1, regionWeather, 0)
+    else
+        TriggerClientEvent('updateWeather', -1, currentWeather, 0)
+    end
+    debugPrint("Weather sync enabled and current weather synced to all clients")
 end
 
 -- Exported function to disable weather sync
@@ -213,7 +219,9 @@ end
 -- Exported function to enable time sync
 function EnableTimeSync()
     timeSyncEnabled = true
-    debugPrint("Time sync enabled")
+    -- Immediately sync current time to all clients
+    TriggerClientEvent('setTimeOfDay', -1, currentServerTime.hours, currentServerTime.minutes)
+    debugPrint("Time sync enabled and current time synced to all clients")
 end
 
 -- Exported function to disable time sync
@@ -221,6 +229,20 @@ function DisableTimeSync()
     timeSyncEnabled = false
     debugPrint("Time sync disabled")
 end
+
+RegisterNetEvent('requestCurrentWeather', function()
+    local source = source
+    if Config.UseRegionalWeather then
+        TriggerClientEvent('updateRegionalWeather', source, regionWeather, 0)
+    else
+        TriggerClientEvent('updateWeather', source, currentWeather, 0)
+    end
+end)
+
+RegisterNetEvent('requestCurrentTime', function()
+    local source = source
+    TriggerClientEvent('setTimeOfDay', source, currentServerTime.hours, currentServerTime.minutes)
+end)
 
 -- Blackout Functions
 -- ===============================================

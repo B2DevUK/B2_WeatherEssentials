@@ -444,37 +444,42 @@ end)
 
 -- Main Thread
 Citizen.CreateThread(function()
+    local lastWeatherCheck = 0
+    local CHECK_INTERVAL = 30000 -- 30 seconds
+    
     while true do
-        Citizen.Wait(10000)
-        if weatherSyncEnabled and not currentExtremeEvent then
+        Citizen.Wait(CHECK_INTERVAL)
+        
+        if weatherSyncEnabled then
+            -- Verify weather state periodically
+            local gameWeather = GetPrevWeatherTypeHashName()
             if Config.UseRegionalWeather then
                 local playerCoords = GetEntityCoords(PlayerPedId())
+                local inRegion = false
                 for region, data in pairs(Config.Regions) do
                     local distance = #(playerCoords.xy - vector2(data.x, data.y))
                     if distance <= data.radius then
-                        local regionWeatherType = regionWeather[region]
-                        SetWeatherTypeOverTime(regionWeatherType, 15.0)
-                        SetWeatherTypePersist(regionWeatherType)
-                        SetWeatherTypeNow(regionWeatherType)
-                        SetWeatherTypeNowPersist(regionWeatherType)
-                        
-                        if Config.WeatherDrivingStyles[regionWeatherType] then
-                            updateDrivingStyle(Config.WeatherDrivingStyles[regionWeatherType])
+                        if GetHashKey(regionWeather[region]) ~= gameWeather then
+                            -- Re-sync weather if mismatch detected
+                            TriggerServerEvent('requestCurrentWeather')
                         end
+                        inRegion = true
                         break
                     end
                 end
+                if not inRegion and GetHashKey(currentWeather) ~= gameWeather then
+                    TriggerServerEvent('requestCurrentWeather')
+                end
             else
-                SetWeatherTypePersist(currentWeather)
-                SetWeatherTypeNowPersist(currentWeather)
-                
-                if Config.WeatherDrivingStyles[currentWeather] then
-                    updateDrivingStyle(Config.WeatherDrivingStyles[currentWeather])
+                if GetHashKey(currentWeather) ~= gameWeather then
+                    TriggerServerEvent('requestCurrentWeather')
                 end
             end
         end
-        if isBlackout then
-            SetArtificialLightsState(true)
+
+        if timeSyncEnabled then
+            -- Request time sync periodically
+            TriggerServerEvent('requestCurrentTime')
         end
     end
 end)
@@ -486,6 +491,8 @@ end)
 -- Function to enable weather sync
 function EnableWeatherSync()
     weatherSyncEnabled = true
+    -- Request current weather from server
+    TriggerServerEvent('requestCurrentWeather')
 end
 
 -- Function to disable weather sync
@@ -496,6 +503,8 @@ end
 -- Function to enable time sync
 function EnableTimeSync()
     timeSyncEnabled = true
+    -- Request current time from server
+    TriggerServerEvent('requestCurrentTime')
 end
 
 -- Function to disable time sync

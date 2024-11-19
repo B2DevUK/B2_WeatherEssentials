@@ -98,6 +98,7 @@ For support, join our Discord server: [B2Scripts](https://discord.gg/KZRBA6H5kR)
 MIT License
 
 ## Changelog
+- 1.3.5: Fixed an issue related to clients not syncing correctly
 - 1.3.0: Fixed an issue causing vehicle lights to be effected & version control
 - 1.2.0: Added time scale customization and real-time server clock synchronization.
 - 1.1.0: Added regional weather system, extreme weather events & voting system.
