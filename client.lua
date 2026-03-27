@@ -12,7 +12,16 @@
 local weatherSyncEnabled = true
 local timeSyncEnabled = true
 local currentWeather = "CLEAR"
-local regionWeather = {City = "CLEAR", Sandy = "CLEAR", Paleto = "CLEAR"}
+
+local function buildRegionWeatherState(defaultWeather)
+    local state = {}
+    for regionName, _ in pairs(Config.Regions or {}) do
+        state[regionName] = defaultWeather or "CLEAR"
+    end
+    return state
+end
+
+local regionWeather = buildRegionWeatherState(currentWeather)
 
 local isBlackout = false
 local currentExtremeEvent = nil
@@ -21,6 +30,8 @@ local lightsState = false
 local votingActive = false
 local voteCounts = {}
 local votingTimer = Config.VotingDuration * 60 * 1000
+local adminPanelOpen = false
+local activeRegion = nil
 
 -- ===============================================
 -- Helper Functions
@@ -57,6 +68,74 @@ local function debugPrint(message)
     end
 end
 
+local function getPlayerRegion()
+    if not Config.UseRegionalWeather then
+        return nil
+    end
+
+    local playerCoords = GetEntityCoords(PlayerPedId())
+    for regionName, data in pairs(Config.Regions or {}) do
+        local distance = #(playerCoords.xy - vector2(data.x, data.y))
+        if distance <= data.radius then
+            return regionName
+        end
+    end
+
+    return nil
+end
+
+local function applyWeatherInstant(weatherType, transitionTime)
+    transitionTime = transitionTime or 15.0
+
+    if not weatherType or currentExtremeEvent then
+        return
+    end
+
+    SetWeatherTypeOverTime(weatherType, transitionTime)
+    Citizen.CreateThread(function()
+        Citizen.Wait(math.floor(transitionTime * 1000))
+        SetWeatherTypePersist(weatherType)
+        SetWeatherTypeNow(weatherType)
+        SetWeatherTypeNowPersist(weatherType)
+
+        if Config.WeatherDrivingStyles[weatherType] then
+            updateDrivingStyle(Config.WeatherDrivingStyles[weatherType])
+        end
+    end)
+end
+
+
+local function sendAdminPanelState(state)
+    SendNUIMessage({
+        action = 'updateAdminPanelState',
+        state = state
+    })
+end
+
+local function openAdminPanel(state)
+    adminPanelOpen = true
+    SetNuiFocus(true, true)
+    SetNuiFocusKeepInput(false)
+    SendNUIMessage({
+        action = 'openAdminPanel',
+        state = state
+    })
+end
+
+local function closeAdminPanel()
+    if not adminPanelOpen then
+        return
+    end
+
+    adminPanelOpen = false
+    SetNuiFocus(false, false)
+    SetNuiFocusKeepInput(false)
+    SendNUIMessage({
+        action = 'closeAdminPanel'
+    })
+    TriggerServerEvent('b2_weather:closePanel')
+end
+
 -- ===============================================
 -- Main Functions
 -- ===============================================
@@ -67,48 +146,22 @@ end
 -- Weather Update
 RegisterNetEvent('updateWeather')
 AddEventHandler('updateWeather', function(newWeather, transitionTime)
-    transitionTime = transitionTime or 15.0  -- Add default value for transitionTime
+    transitionTime = transitionTime or 15.0
     if not currentExtremeEvent then
         currentWeather = newWeather
-        SetWeatherTypeOverTime(newWeather, transitionTime)
-        Citizen.CreateThread(function()
-            Citizen.Wait(transitionTime * 1000)
-            SetWeatherTypePersist(newWeather)
-            SetWeatherTypeNow(newWeather)
-            SetWeatherTypeNowPersist(newWeather)
-            
-            if Config.WeatherDrivingStyles[newWeather] then
-                updateDrivingStyle(Config.WeatherDrivingStyles[newWeather])
-            end
-        end)
+        applyWeatherInstant(newWeather, transitionTime)
     end
 end)
 
 -- Regional Weather Update
 RegisterNetEvent('updateRegionalWeather')
 AddEventHandler('updateRegionalWeather', function(newRegionWeather, transitionTime)
-    transitionTime = transitionTime or 15.0  -- Add default value for transitionTime
+    transitionTime = transitionTime or 15.0
     if not currentExtremeEvent then
-        regionWeather = newRegionWeather
-        local playerCoords = GetEntityCoords(PlayerPedId())
-        for region, data in pairs(Config.Regions) do
-            local distance = #(playerCoords.xy - vector2(data.x, data.y))
-            if distance <= data.radius then
-                local newWeather = regionWeather[region]
-                SetWeatherTypeOverTime(newWeather, transitionTime)
-                Citizen.CreateThread(function()
-                    Citizen.Wait(transitionTime * 1000)
-                    SetWeatherTypePersist(newWeather)
-                    SetWeatherTypeNow(newWeather)
-                    SetWeatherTypeNowPersist(newWeather)
-                    
-                    if Config.WeatherDrivingStyles[newWeather] then
-                        updateDrivingStyle(Config.WeatherDrivingStyles[newWeather])
-                    end
-                end)
-                break
-            end
-        end
+        regionWeather = newRegionWeather or regionWeather
+        local playerRegion = getPlayerRegion()
+        local newWeather = playerRegion and regionWeather[playerRegion] or currentWeather
+        applyWeatherInstant(newWeather, transitionTime)
     end
 end)
 
@@ -428,58 +481,121 @@ AddEventHandler('syncWeatherAndTime', function(weather, hours, minutes)
     NetworkOverrideClockTime(hours, minutes, 0)
 end)
 
+
+RegisterNetEvent('b2_weather:openAdminPanel')
+AddEventHandler('b2_weather:openAdminPanel', function(state)
+    openAdminPanel(state)
+end)
+
+RegisterNetEvent('b2_weather:updateAdminPanelState')
+AddEventHandler('b2_weather:updateAdminPanelState', function(state)
+    sendAdminPanelState(state)
+end)
+
+RegisterCommand('weatherui', function()
+    TriggerServerEvent('b2_weather:requestPanelOpen')
+end, false)
+
+RegisterKeyMapping('weatherui', 'Open Weather Control Panel', 'keyboard', '')
+
 -- UI Functions
 -- ===============================================
 
 -- Handle NUI callbacks
 RegisterNUICallback('close', function(data, cb)
     votingActive = false
-    SetNuiFocus(false, false)
+    closeAdminPanel()
     cb('ok')
 end)
 
+RegisterNUICallback('closeAdminPanel', function(data, cb)
+    closeAdminPanel()
+    cb('ok')
+end)
+
+RegisterNUICallback('requestAdminState', function(data, cb)
+    TriggerServerEvent('b2_weather:requestAdminPanelState')
+    cb('ok')
+end)
+
+RegisterNUICallback('setWeather', function(data, cb)
+    TriggerServerEvent('b2_weather:setWeatherFromUi', data.weather, data.region)
+    cb('ok')
+end)
+
+RegisterNUICallback('setTime', function(data, cb)
+    TriggerServerEvent('b2_weather:setTimeFromUi', data.hours, data.minutes)
+    cb('ok')
+end)
+
+RegisterNUICallback('setBlackout', function(data, cb)
+    TriggerServerEvent('b2_weather:setBlackoutFromUi', data.state == true)
+    cb('ok')
+end)
+
+RegisterNUICallback('setExtremeEvent', function(data, cb)
+    TriggerServerEvent('b2_weather:setExtremeEventFromUi', data.event)
+    cb('ok')
+end)
+
+RegisterNUICallback('clearExtremeEvent', function(data, cb)
+    TriggerServerEvent('b2_weather:clearExtremeEventFromUi')
+    cb('ok')
+end)
+
+RegisterNUICallback('setWeatherSync', function(data, cb)
+    TriggerServerEvent('b2_weather:setWeatherSyncFromUi', data.state == true)
+    cb('ok')
+end)
+
+RegisterNUICallback('setTimeSync', function(data, cb)
+    TriggerServerEvent('b2_weather:setTimeSyncFromUi', data.state == true)
+    cb('ok')
+end)
 -- ===============================================
 -- Citizen Threads
 -- ===============================================
 
 -- Main Thread
 Citizen.CreateThread(function()
-    local lastWeatherCheck = 0
-    local CHECK_INTERVAL = 30000 -- 30 seconds
-    
+    local CHECK_INTERVAL = 2000
+    local fullSyncTimer = 0
+
     while true do
         Citizen.Wait(CHECK_INTERVAL)
-        
+        fullSyncTimer = fullSyncTimer + CHECK_INTERVAL
+
         if weatherSyncEnabled then
-            -- Verify weather state periodically
-            local gameWeather = GetPrevWeatherTypeHashName()
             if Config.UseRegionalWeather then
-                local playerCoords = GetEntityCoords(PlayerPedId())
-                local inRegion = false
-                for region, data in pairs(Config.Regions) do
-                    local distance = #(playerCoords.xy - vector2(data.x, data.y))
-                    if distance <= data.radius then
-                        if GetHashKey(regionWeather[region]) ~= gameWeather then
-                            -- Re-sync weather if mismatch detected
-                            TriggerServerEvent('requestCurrentWeather')
-                        end
-                        inRegion = true
-                        break
-                    end
+                local playerRegion = getPlayerRegion()
+                if playerRegion ~= activeRegion then
+                    activeRegion = playerRegion
+                    local targetWeather = playerRegion and regionWeather[playerRegion] or currentWeather
+                    applyWeatherInstant(targetWeather, 2.0)
                 end
-                if not inRegion and GetHashKey(currentWeather) ~= gameWeather then
-                    TriggerServerEvent('requestCurrentWeather')
+            end
+
+            if fullSyncTimer >= 30000 then
+                local gameWeather = GetPrevWeatherTypeHashName()
+                local expectedWeather = currentWeather
+
+                if Config.UseRegionalWeather then
+                    local playerRegion = getPlayerRegion()
+                    expectedWeather = playerRegion and regionWeather[playerRegion] or currentWeather
                 end
-            else
-                if GetHashKey(currentWeather) ~= gameWeather then
+
+                if expectedWeather and GetHashKey(expectedWeather) ~= gameWeather then
                     TriggerServerEvent('requestCurrentWeather')
                 end
             end
         end
 
-        if timeSyncEnabled then
-            -- Request time sync periodically
+        if timeSyncEnabled and fullSyncTimer >= 30000 then
             TriggerServerEvent('requestCurrentTime')
+        end
+
+        if fullSyncTimer >= 30000 then
+            fullSyncTimer = 0
         end
     end
 end)

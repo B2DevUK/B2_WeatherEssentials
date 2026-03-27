@@ -9,8 +9,8 @@ Config.WeatherTypes = {
 
 -- Define chances for each weather type (sum should be 100)
 Config.WeatherChances = {
-    CLEAR = 20, EXTRASUNNY = 15, CLOUDS = 10, OVERCAST = 10, RAIN = 10,
-    CLEARING = 5, THUNDER = 5, SMOG = 5, FOGGY = 5, XMAS = 5, SNOWLIGHT = 5, BLIZZARD = 5
+    CLEAR = 20, EXTRASUNNY = 80, CLOUDS = 10, OVERCAST = 10, RAIN = 10,
+    CLEARING = 5, THUNDER = 5, SMOG = 5, FOGGY = 0, XMAS = 0, SNOWLIGHT = 0, BLIZZARD = 0
 }
 
 -- Define interval for weather changes (in minutes)
@@ -31,17 +31,33 @@ Config.BlackoutEnabled = true
 
 -- Optional: Different weather for different regions
 Config.UseRegionalWeather = true
+Config.UseRegionalWeather = true
+
 Config.Regions = {
-    City = {x = 0, y = 0, radius = 2000},  -- Define center and radius for the city
-    Sandy = {x = 2000, y = 2000, radius = 1000},  -- Define center and radius for Sandy Shores
-    Paleto = {x = -3000, y = 3000, radius = 1000}  -- Define center and radius for Paleto Bay
+    City = {
+        x = -270.0,
+        y = -950.0,
+        radius = 3200.0
+    },
+
+    Sandy = {
+        x = 1840.0,
+        y = 3710.0,
+        radius = 1800.0
+    },
+
+    Paleto = {
+        x = -230.0,
+        y = 6250.0,
+        radius = 1500.0
+    }
 }
 
 -- Tsunami for server restart
 Config.TsunamiForRestart = true
 
 -- Voting system configuration
-Config.EnableVotingSystem = true
+Config.EnableVotingSystem = false
 Config.VotingDuration = 1 -- in minutes
 Config.VotingInterval = 30 -- in minutes
 Config.WeatherBlacklist = {"XMAS", "SNOWLIGHT", "BLIZZARD"} -- Weather types not allowed in voting

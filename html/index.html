@@ -1,95 +1,1160 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Voting System</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>B2 Weather Control</title>
     <style>
-        body {
-            font-family: 'Roboto', sans-serif;
+        :root {
+            --bg: rgba(6, 10, 20, 0.72);
+            --panel: rgba(13, 19, 35, 0.84);
+            --panel-2: rgba(20, 28, 50, 0.92);
+            --line: rgba(119, 167, 255, 0.22);
+            --text: #eef4ff;
+            --muted: #8ba1c7;
+            --cyan: #62d7ff;
+            --blue: #6495ff;
+            --violet: #9b78ff;
+            --green: #79ffb6;
+            --amber: #ffd479;
+            --red: #ff7d96;
+            --shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+            --glow: 0 0 0 1px rgba(115, 190, 255, 0.2), 0 0 24px rgba(82, 174, 255, 0.18);
         }
-        .bg-neutral-800 {
-            background-color: #272727;
+
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            color: var(--text);
+            background: transparent;
+            user-select: none;
         }
-        .bg-neutral-600 {
-            background-color: #353535;
+
+        .hidden { display: none !important; }
+
+
+        body.panel-open {
+            pointer-events: auto;
+        }
+
+
+        .admin-shell {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5vh 1.5vw;
+            background:
+                radial-gradient(circle at 18% 18%, rgba(99, 149, 255, 0.08), transparent 22%),
+                radial-gradient(circle at 82% 18%, rgba(155, 120, 255, 0.06), transparent 20%),
+                radial-gradient(circle at 50% 100%, rgba(98, 215, 255, 0.05), transparent 24%),
+                rgba(1, 4, 10, 0.06);
+            backdrop-filter: none;
+        }
+
+        .admin-panel {
+            width: min(1540px, 97vw);
+            height: min(940px, 97vh);
+            display: grid;
+            grid-template-columns: 286px minmax(0, 1fr);
+            gap: 14px;
+        }
+
+        .glass {
+            background: linear-gradient(180deg, rgba(18, 26, 46, 0.92), rgba(8, 13, 24, 0.9));
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            box-shadow: var(--shadow), var(--glow);
+            overflow: hidden;
+        }
+
+        .sidebar {
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+        }
+
+        .brand {
+            position: relative;
+            padding: 13px;
+            border-radius: 16px;
+            border: 1px solid rgba(98, 215, 255, 0.2);
+            background: linear-gradient(145deg, rgba(15, 26, 52, 0.95), rgba(12, 17, 31, 0.95));
+        }
+
+        .brand::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(98, 215, 255, 0.12), transparent);
+            transform: translateX(-100%);
+            animation: scan 6s linear infinite;
+            pointer-events: none;
+        }
+
+        @keyframes scan {
+            100% { transform: translateX(100%); }
+        }
+
+        .eyebrow {
+            font-size: 11px;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--cyan);
+            margin-bottom: 10px;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 22px;
+            line-height: 1.05;
+        }
+
+        .brand p {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .status-card {
+            padding: 12px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .status-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--muted);
+        }
+
+        .status-value {
+            margin-top: 6px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .chip {
+            padding: 8px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .chip strong { color: var(--text); }
+
+        .main {
+            padding: 14px;
+            display: grid;
+            grid-template-rows: auto auto minmax(0, 1fr);
+            gap: 14px;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 14px 16px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(14, 20, 36, 0.96), rgba(12, 16, 29, 0.9));
+            border: 1px solid rgba(122, 179, 255, 0.18);
+        }
+
+        .topbar h2 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .topbar p {
+            margin: 4px 0 0;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .topbar-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            appearance: none;
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+        }
+
+        button:hover { transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+
+        .btn {
+            min-height: 40px;
+            padding: 0 14px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            font-weight: 600;
+        }
+
+        .btn.primary {
+            background: linear-gradient(135deg, rgba(98, 215, 255, 0.18), rgba(100, 149, 255, 0.18));
+            border-color: rgba(98, 215, 255, 0.32);
+        }
+
+        .btn.danger {
+            background: linear-gradient(135deg, rgba(255, 110, 140, 0.15), rgba(255, 159, 122, 0.12));
+            border-color: rgba(255, 125, 150, 0.28);
+        }
+
+        .btn.success {
+            background: linear-gradient(135deg, rgba(121, 255, 182, 0.15), rgba(98, 215, 255, 0.1));
+            border-color: rgba(121, 255, 182, 0.24);
+        }
+
+        .section-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+            gap: 14px;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .stack {
+            display: grid;
+            gap: 14px;
+            min-height: 0;
+            align-content: start;
+            overflow-y: auto;
+            padding-right: 4px;
+            padding-bottom: 6px;
+        }
+
+        .stack::-webkit-scrollbar,
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .stack::-webkit-scrollbar-thumb,
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(98, 215, 255, 0.22);
+            border-radius: 999px;
+        }
+
+        .stack::-webkit-scrollbar-track,
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .card {
+            padding: 12px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(15, 23, 40, 0.95), rgba(9, 14, 26, 0.92));
+            border: 1px solid rgba(122, 179, 255, 0.12);
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .card h3 {
+            margin: 0 0 4px;
+            font-size: 14px;
+        }
+
+        .card p.sub {
+            margin: 0 0 12px;
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .target-row,
+        .preset-row,
+        .toggle-row,
+        .weather-grid,
+        .event-grid,
+        .regions-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .target-row {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+
+        .weather-grid {
+            grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+        }
+
+        .event-grid {
+            grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+        }
+
+        .regions-grid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+
+        .tile {
+            padding: 12px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            text-align: left;
+        }
+
+        .tile.active {
+            background: linear-gradient(135deg, rgba(98, 215, 255, 0.16), rgba(155, 120, 255, 0.16));
+            border-color: rgba(98, 215, 255, 0.36);
+            box-shadow: 0 0 0 1px rgba(98, 215, 255, 0.12), 0 0 18px rgba(98, 215, 255, 0.08);
+        }
+
+        .tile-title {
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .tile-meta {
+            margin-top: 5px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr 128px;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .input-group label,
+        .switch-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        input[type="number"] {
+            width: 100%;
+            height: 42px;
+            padding: 0 12px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(2, 8, 18, 0.95);
+            color: var(--text);
+            font-size: 14px;
+            outline: none;
+        }
+
+        input[type="number"]:focus {
+            border-color: rgba(98, 215, 255, 0.42);
+            box-shadow: 0 0 0 3px rgba(98, 215, 255, 0.08);
+        }
+
+        .preset-row {
+            grid-template-columns: repeat(4, 1fr);
+            margin-top: 10px;
+        }
+
+        .toggle-row {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .switch-card {
+            padding: 13px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .switch-card .meta {
+            color: var(--muted);
+            font-size: 11px;
+            margin-top: 3px;
+        }
+
+        .switch {
+            position: relative;
+            width: 60px;
+            height: 32px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .switch::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 4px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: white;
+            transition: transform 0.18s ease;
+        }
+
+        .switch.on {
+            background: linear-gradient(135deg, rgba(121, 255, 182, 0.36), rgba(98, 215, 255, 0.26));
+            border-color: rgba(121, 255, 182, 0.35);
+        }
+
+        .switch.on::after { transform: translateX(28px); }
+
+        .event-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .overview-strip {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .metric {
+            padding: 12px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .metric .label {
+            font-size: 11px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+        }
+
+        .metric .value {
+            margin-top: 6px;
+            font-size: clamp(15px, 1.05vw, 17px);
+            font-weight: 800;
+            overflow-wrap: anywhere;
+        }
+
+        .vote-widget {
+            position: absolute;
+            top: 50%;
+            right: 30px;
+            transform: translateY(-50%);
+            width: 320px;
+            padding: 12px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, rgba(15, 22, 40, 0.96), rgba(7, 12, 24, 0.94));
+            border: 1px solid rgba(98, 215, 255, 0.2);
+            box-shadow: var(--shadow), var(--glow);
+        }
+
+        .vote-widget h3 {
+            margin: 0 0 8px;
+            font-size: 19px;
+        }
+
+        .vote-widget p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .vote-timer {
+            margin: 14px 0 16px;
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--cyan);
+        }
+
+        .vote-list {
+            display: grid;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .vote-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 13px;
+        }
+
+        .muted { color: var(--muted); }
+
+        .is-editing {
+            border-color: rgba(98, 215, 255, 0.42) !important;
+            box-shadow: 0 0 0 3px rgba(98, 215, 255, 0.08);
+        }
+
+        @media (max-height: 900px) {
+            .admin-panel {
+                height: min(980px, 98vh);
+                grid-template-columns: 268px minmax(0, 1fr);
+            }
+
+            .brand h1 { font-size: 20px; }
+            .status-grid { gap: 8px; }
+            .main, .sidebar, .stack, .section-grid { gap: 12px; }
+            .topbar { padding: 12px 14px; }
+            .card { padding: 13px; }
+            .target-row { grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); }
+            .weather-grid { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+            .regions-grid { grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); }
+            .event-grid { grid-template-columns: repeat(auto-fit, minmax(138px, 1fr)); }
+            .tile { padding: 10px; }
+            .event-actions { margin-top: 8px; }
+        }
+
+        @media (max-width: 1300px) {
+            .target-row,
+            .weather-grid,
+            .event-grid,
+            .regions-grid,
+            .overview-strip {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .admin-panel {
+                grid-template-columns: 1fr;
+                height: min(900px, 94vh);
+            }
+            .section-grid,
+            .overview-strip,
+            .toggle-row,
+            .inputs,
+            .preset-row {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
 </head>
-<body class="text-white">
-    <div id="app" v-if="votingActive" class="fixed top-1/3 right-0 p-2 bg-neutral-800 shadow-lg rounded-lg w-1/6">
-        <div class="text-center mb-2">
-            <h2 class="text-lg font-bold mb-1">Weather Voting</h2>
-            <p class="text-xs">Voting ends in:</p>
-            <p class="text-md font-bold">{{ timer }}</p>
-            <p class="text-xs mt-2">Weather Options: Clear, Extrasunny, Clouds, Overcast, Rain, Clearing, Thunder, Smog, Foggy, Xmas, Snowlight, or Blizzard </p>
-            <p class="text-xs mt-2">To vote, type:</p>
-            <p class="text-sm font-bold">/weathervote [weather]</p>
-        </div>
-        <div class="bg-neutral-600 p-2 rounded-lg">
-            <ul>
-                <li v-for="(count, weather) in votes" :key="weather" class="flex justify-between mb-1">
-                    <span>{{ weather }}</span>
-                    <span>{{ count }}</span>
-                </li>
-            </ul>
+<body>
+    <div id="adminShell" class="admin-shell hidden">
+        <div class="admin-panel">
+            <aside class="glass sidebar">
+                <div class="brand">
+                    <div class="eyebrow">Environmental Control</div>
+                    <h1>Future Climate Console</h1>
+                    <p>Fast control over global weather, district weather, time sync, blackout state, and severe event routing.</p>
+                </div>
+
+                <div class="status-grid">
+                    <div class="status-card">
+                        <div class="status-label">Global Weather</div>
+                        <div class="status-value" id="statusGlobalWeather">CLEAR</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">Server Time</div>
+                        <div class="status-value" id="statusServerTime">12:00</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">Blackout</div>
+                        <div class="status-value" id="statusBlackout">OFF</div>
+                    </div>
+                    <div class="status-card">
+                        <div class="status-label">Extreme Event</div>
+                        <div class="status-value" id="statusExtreme">NONE</div>
+                    </div>
+                </div>
+
+                <div class="chip-row">
+                    <div class="chip"><strong>Weather Sync:</strong> <span id="chipWeatherSync">Enabled</span></div>
+                    <div class="chip"><strong>Time Sync:</strong> <span id="chipTimeSync">Enabled</span></div>
+                    <div class="chip"><strong>Mode:</strong> <span id="chipRegionMode">Regional</span></div>
+                </div>
+            </aside>
+
+            <main class="glass main">
+                <div class="topbar">
+                    <div>
+                        <h2>Administrative Atmospherics</h2>
+                        <p>Use the zone selector to target all players or only a specific region configured in the script.</p>
+                    </div>
+                    <div class="topbar-actions">
+                        <button class="btn" id="refreshBtn">Refresh</button>
+                        <button class="btn danger" id="closeBtn">Close</button>
+                    </div>
+                </div>
+
+                <div class="overview-strip">
+                    <div class="metric">
+                        <div class="label">Selected Target</div>
+                        <div class="value" id="selectedTargetText">GLOBAL</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Region Count</div>
+                        <div class="value" id="regionCount">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Weather Presets</div>
+                        <div class="value" id="weatherTypeCount">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="label">Emergency State</div>
+                        <div class="value" id="emergencyState">Stable</div>
+                    </div>
+                </div>
+
+                <div class="section-grid">
+                    <div class="stack">
+                        <section class="card">
+                            <h3>Target Zone</h3>
+                            <p class="sub">Apply changes globally or route them to one of your configured city regions.</p>
+                            <div class="target-row" id="targetRow"></div>
+                        </section>
+
+                        <section class="card">
+                            <h3>Weather Matrix</h3>
+                            <p class="sub">Choose a weather state and instantly apply it to the selected target.</p>
+                            <div class="weather-grid" id="weatherGrid"></div>
+                        </section>
+
+                        <section class="card">
+                            <h3>Regional Snapshot</h3>
+                            <p class="sub">Live district readout from the script’s configured regions.</p>
+                            <div class="regions-grid" id="regionsGrid"></div>
+                        </section>
+                    </div>
+
+                    <div class="stack">
+                        <section class="card">
+                            <h3>Temporal Controls</h3>
+                            <p class="sub">Set exact time or tap a preset scene.</p>
+                            <div class="inputs">
+                                <div class="input-group">
+                                    <label for="hoursInput">Hours</label>
+                                    <input id="hoursInput" type="number" min="0" max="23" value="12" />
+                                </div>
+                                <div class="input-group">
+                                    <label for="minutesInput">Minutes</label>
+                                    <input id="minutesInput" type="number" min="0" max="59" value="0" />
+                                </div>
+                                <button class="btn primary" id="applyTimeBtn">Apply Time</button>
+                            </div>
+                            <div class="preset-row">
+                                <button class="btn" data-hours="6" data-minutes="0">Dawn</button>
+                                <button class="btn" data-hours="12" data-minutes="0">Noon</button>
+                                <button class="btn" data-hours="18" data-minutes="30">Sunset</button>
+                                <button class="btn" data-hours="0" data-minutes="0">Midnight</button>
+                            </div>
+                        </section>
+
+                        <section class="card">
+                            <h3>Sync + Grid Power</h3>
+                            <p class="sub">Control synchronization and city lighting from one place.</p>
+                            <div class="toggle-row">
+                                <div class="switch-card">
+                                    <div>
+                                        <div class="switch-label">Weather Sync</div>
+                                        <div class="meta">Server-driven weather updates</div>
+                                    </div>
+                                    <button class="switch" id="weatherSyncToggle"></button>
+                                </div>
+                                <div class="switch-card">
+                                    <div>
+                                        <div class="switch-label">Time Sync</div>
+                                        <div class="meta">Server-driven clock updates</div>
+                                    </div>
+                                    <button class="switch" id="timeSyncToggle"></button>
+                                </div>
+                            </div>
+                            <div class="event-actions">
+                                <button class="btn danger" id="toggleBlackoutBtn">Toggle Blackout</button>
+                            </div>
+                        </section>
+
+                        <section class="card">
+                            <h3>Extreme Events</h3>
+                            <p class="sub">Launch or clear server-wide emergency weather events.</p>
+                            <div class="event-grid" id="eventGrid"></div>
+                            <div class="event-actions">
+                                <button class="btn danger" id="clearExtremeBtn">Clear Extreme Event</button>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
+    <div id="voteWidget" class="vote-widget hidden">
+        <div class="eyebrow">Weather Vote</div>
+        <h3>Server Weather Poll</h3>
+        <p>Vote in chat with <strong>/weathervote [weather]</strong> or use the <strong>!WEATHER</strong> shortcut.</p>
+        <div class="vote-timer" id="voteTimer">0:00</div>
+        <p class="muted" id="voteOptionsText">Waiting for the next session…</p>
+        <div class="vote-list" id="voteList"></div>
+    </div>
+
     <script>
-        new Vue({
-            el: '#app',
-            data: {
-                votingActive: false,
-                timer: '',
-                votes: {},
-                weatherTypes: [],
-                blacklist: []
+        const resourceName = (typeof GetParentResourceName === 'function' ? GetParentResourceName() : 'b2_weatherEssentials');
+
+        const state = {
+            adminOpen: false,
+            selectedTarget: 'GLOBAL',
+            votingActive: false,
+            voteInterval: null,
+            voteTimeRemaining: 0,
+            panel: {
+                currentWeather: 'CLEAR',
+                regionWeather: {},
+                isBlackout: false,
+                currentExtremeEvent: null,
+                currentServerTime: { hours: 12, minutes: 0 },
+                weatherSyncEnabled: true,
+                timeSyncEnabled: true,
+                useRegionalWeather: true,
+                weatherTypes: {},
+                regions: {},
+                extremeEvents: {}
             },
-            methods: {
-                handleMessage(event) {
-                    const { action, sound, votes, duration, weatherTypes, blacklist } = event.data;
-                    if (action === 'playSound') {
-                        this.playSound(sound);
-                    } else if (action === 'startVoting') {
-                        this.votingActive = true;
-                        this.votes = {};
-                        this.weatherTypes = weatherTypes;
-                        this.blacklist = blacklist;
-                        this.startTimer(duration * 60);
-                    } else if (action === 'updateVotes') {
-                        this.votes = votes;
-                    } else if (action === 'endVoting') {
-                        this.votingActive = false;
-                    }
-                },
-                playSound(soundFile) {
-                    const audio = new Audio(`./sounds/${soundFile}`);
-                    audio.volume = 0.5; // Adjust volume as needed
-                    audio.play();
-                },
-                startTimer(duration) {
-                    let timer = duration;
-                    const interval = setInterval(() => {
-                        const minutes = Math.floor(timer / 60);
-                        const seconds = timer % 60;
-                        this.timer = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-                        if (--timer < 0) {
-                            clearInterval(interval);
-                            this.votingActive = false;
-                        }
-                    }, 1000);
-                }
-            },
-            created() {
-                window.addEventListener('message', this.handleMessage);
-            },
-            beforeDestroy() {
-                window.removeEventListener('message', this.handleMessage);
+            votes: {},
+            timeInputDirty: false,
+            timeInputFocused: false
+        };
+
+        const els = {
+            adminShell: document.getElementById('adminShell'),
+            voteWidget: document.getElementById('voteWidget'),
+            targetRow: document.getElementById('targetRow'),
+            weatherGrid: document.getElementById('weatherGrid'),
+            regionsGrid: document.getElementById('regionsGrid'),
+            eventGrid: document.getElementById('eventGrid'),
+            closeBtn: document.getElementById('closeBtn'),
+            refreshBtn: document.getElementById('refreshBtn'),
+            applyTimeBtn: document.getElementById('applyTimeBtn'),
+            hoursInput: document.getElementById('hoursInput'),
+            minutesInput: document.getElementById('minutesInput'),
+            weatherSyncToggle: document.getElementById('weatherSyncToggle'),
+            timeSyncToggle: document.getElementById('timeSyncToggle'),
+            toggleBlackoutBtn: document.getElementById('toggleBlackoutBtn'),
+            clearExtremeBtn: document.getElementById('clearExtremeBtn'),
+            statusGlobalWeather: document.getElementById('statusGlobalWeather'),
+            statusServerTime: document.getElementById('statusServerTime'),
+            statusBlackout: document.getElementById('statusBlackout'),
+            statusExtreme: document.getElementById('statusExtreme'),
+            chipWeatherSync: document.getElementById('chipWeatherSync'),
+            chipTimeSync: document.getElementById('chipTimeSync'),
+            chipRegionMode: document.getElementById('chipRegionMode'),
+            selectedTargetText: document.getElementById('selectedTargetText'),
+            regionCount: document.getElementById('regionCount'),
+            weatherTypeCount: document.getElementById('weatherTypeCount'),
+            emergencyState: document.getElementById('emergencyState'),
+            voteTimer: document.getElementById('voteTimer'),
+            voteOptionsText: document.getElementById('voteOptionsText'),
+            voteList: document.getElementById('voteList')
+        };
+
+        function post(action, data = {}) {
+            return fetch(`https://${resourceName}/${action}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+                body: JSON.stringify(data)
+            });
+        }
+
+        function formatTime(hours, minutes) {
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+
+        function prettifyName(value) {
+            return String(value || '')
+                .toLowerCase()
+                .split('_')
+                .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+                .join(' ');
+        }
+
+        function setSwitchVisual(el, isOn) {
+            el.classList.toggle('on', !!isOn);
+        }
+
+        function shouldPreserveManualTime() {
+            const active = document.activeElement;
+            return state.timeInputDirty || state.timeInputFocused || active === els.hoursInput || active === els.minutesInput;
+        }
+
+        function syncTimeInputsFromState(force = false) {
+            if (!force && shouldPreserveManualTime()) {
+                return;
             }
+
+            els.hoursInput.value = state.panel.currentServerTime?.hours ?? 12;
+            els.minutesInput.value = state.panel.currentServerTime?.minutes ?? 0;
+            state.timeInputDirty = false;
+        }
+
+        function markTimeEditing(isEditing) {
+            state.timeInputFocused = isEditing;
+            els.hoursInput.classList.toggle('is-editing', isEditing || state.timeInputDirty);
+            els.minutesInput.classList.toggle('is-editing', isEditing || state.timeInputDirty);
+        }
+
+        function renderTargets() {
+            els.targetRow.innerHTML = '';
+
+            const targets = ['GLOBAL', ...(state.panel.useRegionalWeather ? Object.keys(state.panel.regions || {}) : [])];
+
+            targets.forEach(target => {
+                const btn = document.createElement('button');
+                btn.className = 'tile' + (state.selectedTarget === target ? ' active' : '');
+                btn.innerHTML = `
+                    <div class="tile-title">${target === 'GLOBAL' ? 'Global Broadcast' : prettifyName(target)}</div>
+                    <div class="tile-meta">${target === 'GLOBAL' ? 'All connected players' : 'Regional override zone'}</div>
+                `;
+                btn.addEventListener('click', () => {
+                    state.selectedTarget = target;
+                    renderTargets();
+                    renderOverview();
+                });
+                els.targetRow.appendChild(btn);
+            });
+        }
+
+        function renderWeatherGrid() {
+            els.weatherGrid.innerHTML = '';
+            const weatherTypes = Object.keys(state.panel.weatherTypes || {});
+
+            weatherTypes.forEach(weather => {
+                const btn = document.createElement('button');
+                btn.className = 'tile';
+                btn.innerHTML = `
+                    <div class="tile-title">${prettifyName(weather)}</div>
+                    <div class="tile-meta">Apply to ${state.selectedTarget === 'GLOBAL' ? 'entire server' : prettifyName(state.selectedTarget)}</div>
+                `;
+                btn.addEventListener('click', async () => {
+                    await post('setWeather', {
+                        weather,
+                        region: state.selectedTarget
+                    });
+                });
+                els.weatherGrid.appendChild(btn);
+            });
+        }
+
+        function renderRegions() {
+            els.regionsGrid.innerHTML = '';
+
+            if (!state.panel.useRegionalWeather) {
+                const empty = document.createElement('div');
+                empty.className = 'tile';
+                empty.innerHTML = `
+                    <div class="tile-title">Regional mode disabled</div>
+                    <div class="tile-meta">Enable regional weather in config.lua to manage districts separately.</div>
+                `;
+                els.regionsGrid.appendChild(empty);
+                return;
+            }
+
+            Object.keys(state.panel.regions || {}).forEach(region => {
+                const tile = document.createElement('div');
+                tile.className = 'tile';
+                tile.innerHTML = `
+                    <div class="tile-title">${prettifyName(region)}</div>
+                    <div class="tile-meta">Weather: ${prettifyName(state.panel.regionWeather?.[region] || 'CLEAR')}</div>
+                `;
+                els.regionsGrid.appendChild(tile);
+            });
+        }
+
+        function renderEvents() {
+            els.eventGrid.innerHTML = '';
+            Object.keys(state.panel.extremeEvents || {}).forEach(eventName => {
+                const btn = document.createElement('button');
+                btn.className = 'tile';
+                btn.innerHTML = `
+                    <div class="tile-title">${prettifyName(eventName)}</div>
+                    <div class="tile-meta">Launch severe event</div>
+                `;
+                btn.addEventListener('click', async () => {
+                    await post('setExtremeEvent', { event: eventName });
+                });
+                els.eventGrid.appendChild(btn);
+            });
+        }
+
+        function renderOverview() {
+            els.statusGlobalWeather.textContent = prettifyName(state.panel.currentWeather || 'CLEAR');
+            els.statusServerTime.textContent = formatTime(state.panel.currentServerTime?.hours ?? 12, state.panel.currentServerTime?.minutes ?? 0);
+            els.statusBlackout.textContent = state.panel.isBlackout ? 'ACTIVE' : 'OFF';
+            els.statusExtreme.textContent = state.panel.currentExtremeEvent ? prettifyName(state.panel.currentExtremeEvent) : 'NONE';
+            els.chipWeatherSync.textContent = state.panel.weatherSyncEnabled ? 'Enabled' : 'Disabled';
+            els.chipTimeSync.textContent = state.panel.timeSyncEnabled ? 'Enabled' : 'Disabled';
+            els.chipRegionMode.textContent = state.panel.useRegionalWeather ? 'Regional' : 'Global Only';
+            els.selectedTargetText.textContent = state.selectedTarget === 'GLOBAL' ? 'GLOBAL' : prettifyName(state.selectedTarget);
+            els.regionCount.textContent = String(Object.keys(state.panel.regions || {}).length);
+            els.weatherTypeCount.textContent = String(Object.keys(state.panel.weatherTypes || {}).length);
+            els.emergencyState.textContent = state.panel.currentExtremeEvent || state.panel.isBlackout ? 'Alert' : 'Stable';
+
+            syncTimeInputsFromState();
+            markTimeEditing(state.timeInputFocused);
+            setSwitchVisual(els.weatherSyncToggle, state.panel.weatherSyncEnabled);
+            setSwitchVisual(els.timeSyncToggle, state.panel.timeSyncEnabled);
+            els.toggleBlackoutBtn.textContent = state.panel.isBlackout ? 'Clear Blackout' : 'Trigger Blackout';
+        }
+
+        function renderPanel() {
+            renderTargets();
+            renderWeatherGrid();
+            renderRegions();
+            renderEvents();
+            renderOverview();
+        }
+
+        function openAdminPanel(payload) {
+            state.adminOpen = true;
+            state.panel = payload || state.panel;
+            state.timeInputDirty = false;
+            state.timeInputFocused = false;
+            document.body.classList.add('panel-open');
+            els.adminShell.classList.remove('hidden');
+            syncTimeInputsFromState(true);
+            renderPanel();
+        }
+
+        function closeAdminPanel() {
+            state.adminOpen = false;
+            state.timeInputDirty = false;
+            state.timeInputFocused = false;
+            document.body.classList.remove('panel-open');
+            els.adminShell.classList.add('hidden');
+        }
+
+        function updateAdminPanelState(payload) {
+            state.panel = payload || state.panel;
+            renderPanel();
+        }
+
+        function renderVoteList() {
+            els.voteList.innerHTML = '';
+            const entries = Object.entries(state.votes || {});
+
+            if (!entries.length) {
+                const item = document.createElement('div');
+                item.className = 'vote-item';
+                item.innerHTML = '<span>No votes yet</span><span>0</span>';
+                els.voteList.appendChild(item);
+                return;
+            }
+
+            entries.sort((a, b) => b[1] - a[1]).forEach(([weather, count]) => {
+                const item = document.createElement('div');
+                item.className = 'vote-item';
+                item.innerHTML = `<span>${prettifyName(weather)}</span><strong>${count}</strong>`;
+                els.voteList.appendChild(item);
+            });
+        }
+
+        function stopVoteTimer() {
+            if (state.voteInterval) {
+                clearInterval(state.voteInterval);
+                state.voteInterval = null;
+            }
+        }
+
+        function startVoteTimer(durationMinutes) {
+            stopVoteTimer();
+            state.voteTimeRemaining = Math.max(0, Math.floor((durationMinutes || 0) * 60));
+
+            const tick = () => {
+                const minutes = Math.floor(state.voteTimeRemaining / 60);
+                const seconds = state.voteTimeRemaining % 60;
+                els.voteTimer.textContent = `${minutes}:${String(seconds).padStart(2, '0')}`;
+                state.voteTimeRemaining -= 1;
+
+                if (state.voteTimeRemaining < 0) {
+                    stopVoteTimer();
+                    hideVoting();
+                }
+            };
+
+            tick();
+            state.voteInterval = setInterval(tick, 1000);
+        }
+
+        function showVoting(duration, weatherTypes, blacklist) {
+            state.votingActive = true;
+            state.votes = {};
+            const options = Object.keys(weatherTypes || {}).filter(name => !(blacklist || []).includes(name));
+            els.voteOptionsText.textContent = options.length
+                ? `Available options: ${options.map(prettifyName).join(', ')}`
+                : 'Voting session active.';
+            els.voteWidget.classList.remove('hidden');
+            renderVoteList();
+            startVoteTimer(duration);
+        }
+
+        function hideVoting() {
+            state.votingActive = false;
+            els.voteWidget.classList.add('hidden');
+            stopVoteTimer();
+        }
+
+        function playSound(soundFile) {
+            if (!soundFile) return;
+            const audio = new Audio(`./sounds/${soundFile}`);
+            audio.volume = 0.5;
+            audio.play().catch(() => {});
+        }
+
+        window.addEventListener('message', (event) => {
+            const data = event.data || {};
+
+            if (data.action === 'openAdminPanel') {
+                openAdminPanel(data.state);
+                return;
+            }
+
+            if (data.action === 'closeAdminPanel') {
+                closeAdminPanel();
+                return;
+            }
+
+            if (data.action === 'updateAdminPanelState') {
+                updateAdminPanelState(data.state);
+                return;
+            }
+
+            if (data.action === 'playSound') {
+                playSound(data.sound);
+                return;
+            }
+
+            if (data.transactionType === 'playSound') {
+                playSound(data.transactionFile);
+                return;
+            }
+
+            if (data.action === 'startVoting') {
+                showVoting(data.duration, data.weatherTypes, data.blacklist);
+                return;
+            }
+
+            if (data.action === 'updateVotes') {
+                state.votes = data.votes || {};
+                renderVoteList();
+                return;
+            }
+
+            if (data.action === 'endVoting') {
+                hideVoting();
+            }
+        });
+
+        document.addEventListener('keydown', async (event) => {
+            if (event.key === 'Escape') {
+                if (state.adminOpen) {
+                    await post('closeAdminPanel');
+                    closeAdminPanel();
+                } else if (state.votingActive) {
+                    await post('close');
+                }
+            }
+        });
+
+        els.closeBtn.addEventListener('click', async () => {
+            await post('closeAdminPanel');
+            closeAdminPanel();
+        });
+
+        els.refreshBtn.addEventListener('click', async () => {
+            await post('requestAdminState');
+        });
+
+        function handleTimeInputActivity() {
+            state.timeInputDirty = true;
+            markTimeEditing(true);
+        }
+
+        [els.hoursInput, els.minutesInput].forEach(input => {
+            input.addEventListener('focus', () => {
+                state.timeInputFocused = true;
+                markTimeEditing(true);
+            });
+
+            input.addEventListener('input', handleTimeInputActivity);
+
+            input.addEventListener('blur', () => {
+                state.timeInputFocused = false;
+                setTimeout(() => markTimeEditing(false), 0);
+            });
+        });
+
+        els.applyTimeBtn.addEventListener('click', async () => {
+            const hours = Math.max(0, Math.min(23, Number(els.hoursInput.value) || 0));
+            const minutes = Math.max(0, Math.min(59, Number(els.minutesInput.value) || 0));
+            els.hoursInput.value = hours;
+            els.minutesInput.value = minutes;
+            state.timeInputDirty = false;
+            state.timeInputFocused = false;
+            markTimeEditing(false);
+            await post('setTime', { hours, minutes });
+        });
+
+        document.querySelectorAll('[data-hours]').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const hours = Number(btn.dataset.hours);
+                const minutes = Number(btn.dataset.minutes);
+                els.hoursInput.value = hours;
+                els.minutesInput.value = minutes;
+                state.timeInputDirty = false;
+                state.timeInputFocused = false;
+                markTimeEditing(false);
+                await post('setTime', { hours, minutes });
+            });
+        });
+
+        els.weatherSyncToggle.addEventListener('click', async () => {
+            await post('setWeatherSync', { state: !state.panel.weatherSyncEnabled });
+        });
+
+        els.timeSyncToggle.addEventListener('click', async () => {
+            await post('setTimeSync', { state: !state.panel.timeSyncEnabled });
+        });
+
+        els.toggleBlackoutBtn.addEventListener('click', async () => {
+            await post('setBlackout', { state: !state.panel.isBlackout });
+        });
+
+        els.clearExtremeBtn.addEventListener('click', async () => {
+            await post('clearExtremeEvent');
         });
     </script>
 </body>

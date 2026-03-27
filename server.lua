@@ -42,7 +42,16 @@ checkForUpdates()
 -- ===============================================
 
 local currentWeather = "CLEAR"
-local regionWeather = {City = "CLEAR", Sandy = "CLEAR", Paleto = "CLEAR"}
+
+local function buildRegionWeatherState(defaultWeather)
+    local state = {}
+    for regionName, _ in pairs(Config.Regions or {}) do
+        state[regionName] = defaultWeather or "CLEAR"
+    end
+    return state
+end
+
+local regionWeather = buildRegionWeatherState(currentWeather)
 
 local isBlackout = false
 local currentExtremeEvent = nil
@@ -56,6 +65,41 @@ local currentServerTime = {hours = 12, minutes = 0}
 local weatherSyncEnabled = true
 local timeSyncEnabled = true
 local timeSyncInterval = (Config.TimeScale * 60 * 1000) / 1440
+
+
+local adminPanelSubscribers = {}
+local broadcastAdminPanelState
+
+local function hasWeatherUiPermission(source)
+    return source == 0
+        or IsPlayerAceAllowed(source, "command.setweather")
+        or IsPlayerAceAllowed(source, "command.settime")
+        or IsPlayerAceAllowed(source, "b2weather.admin")
+end
+
+local function buildAdminPanelState()
+    return {
+        currentWeather = currentWeather,
+        regionWeather = regionWeather,
+        isBlackout = isBlackout,
+        currentExtremeEvent = currentExtremeEvent,
+        currentServerTime = currentServerTime,
+        weatherSyncEnabled = weatherSyncEnabled,
+        timeSyncEnabled = timeSyncEnabled,
+        useRegionalWeather = Config.UseRegionalWeather,
+        weatherTypes = Config.WeatherTypes,
+        regions = Config.Regions,
+        extremeEvents = Config.ExtremeEvents
+    }
+end
+
+broadcastAdminPanelState = function()
+    local state = buildAdminPanelState()
+
+    for player, _ in pairs(adminPanelSubscribers) do
+        TriggerClientEvent('b2_weather:updateAdminPanelState', player, state)
+    end
+end
 
 -- ===============================================
 -- Sync Functions
@@ -91,6 +135,35 @@ local function getRealWorldTime()
     return realTime.hour, realTime.min
 end
 
+local function normalizeRegionName(region)
+    if type(region) ~= 'string' then
+        return nil
+    end
+
+    local trimmed = region:gsub('^%s+', ''):gsub('%s+$', '')
+    if trimmed == '' then
+        return nil
+    end
+
+    if trimmed:upper() == 'GLOBAL' then
+        return nil
+    end
+
+    for regionName, _ in pairs(Config.Regions or {}) do
+        if trimmed == regionName or trimmed:lower() == tostring(regionName):lower() then
+            return regionName
+        end
+
+        local normalizedTrimmed = trimmed:lower():gsub('[%s_%-]', '')
+        local normalizedRegion = tostring(regionName):lower():gsub('[%s_%-]', '')
+        if normalizedTrimmed == normalizedRegion then
+            return regionName
+        end
+    end
+
+    return false
+end
+
 -- ===============================================
 -- Main Functions
 -- ===============================================
@@ -102,19 +175,26 @@ end
 local function changeWeather(weather, region, transitionTime)
     transitionTime = transitionTime or 10.0
 
-    if region then
-        regionWeather[region] = weather
-        debugPrint("Changing weather for region " .. region .. " to " .. weather)
+    if Config.UseRegionalWeather then
+        if region then
+            regionWeather[region] = weather
+            debugPrint("Changing weather for region " .. region .. " to " .. weather)
+        else
+            currentWeather = weather
+            for regionName, _ in pairs(Config.Regions or {}) do
+                regionWeather[regionName] = weather
+            end
+            debugPrint("Changing all configured regions to global weather " .. currentWeather)
+        end
+
+        TriggerClientEvent('updateRegionalWeather', -1, regionWeather, transitionTime)
     else
         currentWeather = weather
         debugPrint("Changing global weather to " .. currentWeather)
-    end
-
-    if Config.UseRegionalWeather then
-        TriggerClientEvent('updateRegionalWeather', -1, regionWeather, transitionTime)
-    else
         TriggerClientEvent('updateWeather', -1, currentWeather, transitionTime)
     end
+
+    broadcastAdminPanelState()
 end
 
 -- Randomly select weather based on chances
@@ -175,17 +255,20 @@ end
 
 -- Exported function to set weather
 function SetWeather(weather, region)
-    if Config.WeatherTypes[weather] then
-        if Config.UseRegionalWeather and region then
-            if Config.Regions[region] then
-                debugPrint("Export: Setting weather for region " .. region .. ": " .. weather)
-                changeWeather(weather, region)
-            end
-        else
-            debugPrint("Export: Setting global weather: " .. weather)
-            changeWeather(weather)
-        end
+    if not Config.WeatherTypes[weather] then
+        return
     end
+
+    local normalizedRegion = normalizeRegionName(region)
+
+    if Config.UseRegionalWeather and normalizedRegion then
+        debugPrint("Export: Setting weather for region " .. normalizedRegion .. ": " .. weather)
+        changeWeather(weather, normalizedRegion)
+        return
+    end
+
+    debugPrint("Export: Setting global weather: " .. weather)
+    changeWeather(weather)
 end
 
 -- Exported function to get current weather
@@ -208,12 +291,14 @@ function EnableWeatherSync()
         TriggerClientEvent('updateWeather', -1, currentWeather, 0)
     end
     debugPrint("Weather sync enabled and current weather synced to all clients")
+    broadcastAdminPanelState()
 end
 
 -- Exported function to disable weather sync
 function DisableWeatherSync()
     weatherSyncEnabled = false
     debugPrint("Weather sync disabled")
+    broadcastAdminPanelState()
 end
 
 -- Exported function to enable time sync
@@ -222,12 +307,14 @@ function EnableTimeSync()
     -- Immediately sync current time to all clients
     TriggerClientEvent('setTimeOfDay', -1, currentServerTime.hours, currentServerTime.minutes)
     debugPrint("Time sync enabled and current time synced to all clients")
+    broadcastAdminPanelState()
 end
 
 -- Exported function to disable time sync
 function DisableTimeSync()
     timeSyncEnabled = false
     debugPrint("Time sync disabled")
+    broadcastAdminPanelState()
 end
 
 RegisterNetEvent('requestCurrentWeather', function()
@@ -252,6 +339,7 @@ local function triggerBlackout()
     isBlackout = true
     debugPrint("Triggering blackout")
     TriggerClientEvent('toggleBlackout', -1, isBlackout)
+    broadcastAdminPanelState()
 end
 
 -- Function to clear a blackout
@@ -259,6 +347,7 @@ local function clearBlackout()
     isBlackout = false
     debugPrint("Clearing blackout")
     TriggerClientEvent('toggleBlackout', -1, isBlackout)
+    broadcastAdminPanelState()
 end
 
 -- Extreme Weather Functions
@@ -281,6 +370,8 @@ local function triggerExtremeEvent(event)
     else
         debugPrint("Unknown extreme event: " .. event)
     end
+
+    broadcastAdminPanelState()
 end
 
 -- Function to clear an extreme event
@@ -288,6 +379,7 @@ local function clearExtremeEvent()
     currentExtremeEvent = nil
     debugPrint("Clearing extreme event")
     TriggerClientEvent('clearExtremeEvent', -1)
+    broadcastAdminPanelState()
 end
 
 function GetCurrentExtremeWeather()
@@ -328,6 +420,8 @@ local function handleVotingResults()
     voteCounts = {}
     votedPlayers = {}
     votingActive = false
+
+    broadcastAdminPanelState()
 
     TriggerClientEvent('endVoting', -1)
     TriggerClientEvent('chat:addMessage', -1, {args = {"^2[Weather]", "Voting has ended. New weather: " .. selectedWeather}})
@@ -395,6 +489,7 @@ Citizen.CreateThread(function()
 
         if timeSyncEnabled then
             TriggerClientEvent('setTimeOfDay', -1, currentServerTime.hours, currentServerTime.minutes)
+            broadcastAdminPanelState()
         end
 
         if Config.UseRealTime then
@@ -464,33 +559,36 @@ RegisterCommand('forcevote', function(source, args, rawCommand)
     end
 end, false)
 
--- Function to capitalize the first letter of a string
-local function capitalize(str)
-    return (str:gsub("^%l", string.upper))
-end
-
 -- Command for admins to change weather
 RegisterCommand('setweather', function(source, args, rawCommand)
-    if IsPlayerAceAllowed(source, "command.setweather") then
-        local newWeather = args[1]:upper()
-        if Config.WeatherTypes[newWeather] then
-            if Config.UseRegionalWeather then
-                local region = args[2] and capitalize(args[2])
-                if Config.Regions[region] then
-                    changeWeather(newWeather, region)
-                else
-                    TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Invalid region!' } })
-                end
-            else
-                debugPrint("Setting global weather: " .. newWeather)
-                changeWeather(newWeather)
-            end
-        else
-            TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Invalid weather type!' } })
-        end
-    else
+    if not IsPlayerAceAllowed(source, "command.setweather") then
         TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'You do not have permission to use this command!' } })
+        return
     end
+
+    local rawWeather = args[1]
+    local newWeather = rawWeather and rawWeather:upper()
+
+    if not newWeather or not Config.WeatherTypes[newWeather] then
+        TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Invalid weather type!' } })
+        return
+    end
+
+    local regionArg = args[2]
+    local normalizedRegion = Config.UseRegionalWeather and normalizeRegionName(regionArg) or nil
+
+    if Config.UseRegionalWeather and regionArg and normalizedRegion == false then
+        TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Invalid region!' } })
+        return
+    end
+
+    if Config.UseRegionalWeather and normalizedRegion then
+        changeWeather(newWeather, normalizedRegion)
+        return
+    end
+
+    debugPrint("Setting global weather: " .. newWeather)
+    changeWeather(newWeather)
 end, false)
 
 
@@ -504,6 +602,7 @@ RegisterCommand('settime', function(source, args, rawCommand)
             currentServerTime.minutes = minutes
             TriggerClientEvent('setTimeOfDay', -1, hours, minutes)
             debugPrint("Setting time to: " .. hours .. ":" .. string.format("%02d", minutes))
+            broadcastAdminPanelState()
         else
             TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Invalid time format! Use /settime [hours] [minutes]' } })
         end
@@ -552,6 +651,172 @@ RegisterCommand('clearextremeevent', function(source, args, rawCommand)
         TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'You do not have permission to use this command!' } })
     end
 end, false)
+
+
+-- ===============================================
+-- Admin UI Events
+-- ===============================================
+
+RegisterNetEvent('b2_weather:requestPanelOpen', function()
+    local source = source
+
+    if not hasWeatherUiPermission(source) then
+        TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'You do not have permission to use this command!' } })
+        return
+    end
+
+    adminPanelSubscribers[source] = true
+    TriggerClientEvent('b2_weather:openAdminPanel', source, buildAdminPanelState())
+end)
+
+RegisterNetEvent('b2_weather:closePanel', function()
+    adminPanelSubscribers[source] = nil
+end)
+
+AddEventHandler('playerDropped', function()
+    adminPanelSubscribers[source] = nil
+end)
+
+RegisterNetEvent('b2_weather:requestAdminPanelState', function()
+    local source = source
+
+    if not hasWeatherUiPermission(source) then
+        return
+    end
+
+    adminPanelSubscribers[source] = true
+    TriggerClientEvent('b2_weather:updateAdminPanelState', source, buildAdminPanelState())
+end)
+
+RegisterNetEvent('b2_weather:setWeatherFromUi', function(weather, region)
+    local source = source
+
+    if not hasWeatherUiPermission(source) then
+        return
+    end
+
+    if type(weather) ~= 'string' then
+        return
+    end
+
+    weather = weather:upper()
+    local normalizedRegion = Config.UseRegionalWeather and normalizeRegionName(region) or nil
+
+    if not Config.WeatherTypes[weather] then
+        TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Invalid weather type!' } })
+        return
+    end
+
+    if Config.UseRegionalWeather and region and normalizedRegion == false then
+        TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Invalid region!' } })
+        return
+    end
+
+    if Config.UseRegionalWeather and normalizedRegion then
+        changeWeather(weather, normalizedRegion, 12.0)
+        return
+    end
+
+    changeWeather(weather, nil, 12.0)
+end)
+
+RegisterNetEvent('b2_weather:setTimeFromUi', function(hours, minutes)
+    local source = source
+
+    if not hasWeatherUiPermission(source) then
+        return
+    end
+
+    hours = tonumber(hours)
+    minutes = tonumber(minutes) or 0
+
+    if not hours or hours < 0 or hours > 23 or minutes < 0 or minutes > 59 then
+        TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Invalid time format!' } })
+        return
+    end
+
+    currentServerTime.hours = hours
+    currentServerTime.minutes = minutes
+
+    if timeSyncEnabled then
+        TriggerClientEvent('setTimeOfDay', -1, hours, minutes)
+    end
+
+    broadcastAdminPanelState()
+end)
+
+RegisterNetEvent('b2_weather:setBlackoutFromUi', function(state)
+    local source = source
+
+    if not hasWeatherUiPermission(source) then
+        return
+    end
+
+    if state then
+        triggerBlackout()
+    else
+        clearBlackout()
+    end
+end)
+
+RegisterNetEvent('b2_weather:setExtremeEventFromUi', function(eventName)
+    local source = source
+
+    if not hasWeatherUiPermission(source) then
+        return
+    end
+
+    if type(eventName) ~= 'string' then
+        return
+    end
+
+    eventName = eventName:upper()
+
+    if not Config.ExtremeEvents[eventName] then
+        TriggerClientEvent('chat:addMessage', source, { args = { '^1SYSTEM', 'Invalid extreme event!' } })
+        return
+    end
+
+    triggerExtremeEvent(eventName)
+end)
+
+RegisterNetEvent('b2_weather:clearExtremeEventFromUi', function()
+    local source = source
+
+    if not hasWeatherUiPermission(source) then
+        return
+    end
+
+    clearExtremeEvent()
+end)
+
+RegisterNetEvent('b2_weather:setWeatherSyncFromUi', function(state)
+    local source = source
+
+    if not hasWeatherUiPermission(source) then
+        return
+    end
+
+    if state then
+        EnableWeatherSync()
+    else
+        DisableWeatherSync()
+    end
+end)
+
+RegisterNetEvent('b2_weather:setTimeSyncFromUi', function(state)
+    local source = source
+
+    if not hasWeatherUiPermission(source) then
+        return
+    end
+
+    if state then
+        EnableTimeSync()
+    else
+        DisableTimeSync()
+    end
+end)
 
 -- ===============================================
 -- Exports
