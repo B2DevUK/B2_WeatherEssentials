@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<WaterData>
+  <!--
+    flood_initial.xml — Tsunami flood state for B2 Weather Essentials
+    ==================================================================
+    Loaded via LoadWaterFromPath() when the tsunami event fires.
+    Defines:
+      • A single large WaterQuad covering the full map at z=0.
+        The base level is then raised at runtime via SetWaterQuadLevel().
+      • A WaveQuad covering the same area with a high Amplitude to
+        produce the dramatic rolling-wave visual that sells the tsunami
+        illusion (this is on top of the rising base level).
+      • A CalmingQuad that prevents infinite wave oscillation —
+        fDampening=0.5 is a good middle ground between chaos and flat water.
+
+    To reset the world after the drain completes, load the normal water.xml
+    (the full GTA V map definition) via LoadWaterFromPath(), which removes
+    these quads and restores the default water state.
+  -->
+  <WaterQuads>
+    <Item>
+      <minX value="-12000" />
+      <maxX value="12000" />
+      <minY value="-12000" />
+      <maxY value="12000" />
+      <Type value="0" />
+      <IsInvisible value="false" />
+      <HasLimitedDepth value="false" />
+      <!-- Starting level; SetWaterQuadLevel() overrides this at runtime -->
+      <z value="0.0" />
+      <a1 value="26" />
+      <a2 value="26" />
+      <a3 value="26" />
+      <a4 value="26" />
+      <NoStencil value="false" />
+    </Item>
+  </WaterQuads>
+  <WaveQuads>
+    <Item>
+      <minX value="-12000" />
+      <maxX value="12000" />
+      <minY value="-12000" />
+      <maxY value="12000" />
+      <!-- Height of individual waves in metres. 50 = dramatic tsunami waves.  -->
+      <!-- Reduce to 10-20 for a calmer flood look.                            -->
+      <Amplitude value="50" />
+      <XDirection value="0.0" />
+      <YDirection value="-0.0" />
+    </Item>
+    <CalmingQuads>
+      <Item>
+        <minX value="-12000" />
+        <maxX value="12000" />
+        <minY value="-12000" />
+        <maxY value="12000" />
+        <!-- 0.0 = no damping (chaotic), 1.0 = instant flat water -->
+        <fDampening value="0.5" />
+      </Item>
+    </CalmingQuads>
+  </WaveQuads>
+</WaterData>

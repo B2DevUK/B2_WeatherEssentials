@@ -1,96 +1,485 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Voting System</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-        }
-        .bg-neutral-800 {
-            background-color: #272727;
-        }
-        .bg-neutral-600 {
-            background-color: #353535;
-        }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B2 Weather Essentials</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/style.css" />
+  <style>
+    body.dev-mode { background: linear-gradient(135deg,#050810 0%,#0b1120 100%) !important; }
+  </style>
 </head>
-<body class="text-white">
-    <div id="app" v-if="votingActive" class="fixed top-1/3 right-0 p-2 bg-neutral-800 shadow-lg rounded-lg w-1/6">
-        <div class="text-center mb-2">
-            <h2 class="text-lg font-bold mb-1">Weather Voting</h2>
-            <p class="text-xs">Voting ends in:</p>
-            <p class="text-md font-bold">{{ timer }}</p>
-            <p class="text-xs mt-2">Weather Options: Clear, Extrasunny, Clouds, Overcast, Rain, Clearing, Thunder, Smog, Foggy, Xmas, Snowlight, or Blizzard </p>
-            <p class="text-xs mt-2">To vote, type:</p>
-            <p class="text-sm font-bold">/weathervote [weather]</p>
-        </div>
-        <div class="bg-neutral-600 p-2 rounded-lg">
-            <ul>
-                <li v-for="(count, weather) in votes" :key="weather" class="flex justify-between mb-1">
-                    <span>{{ weather }}</span>
-                    <span>{{ count }}</span>
-                </li>
-            </ul>
-        </div>
-    </div>
+<body>
+  <div id="player-root"></div>
+  <div id="admin-root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
 
-    <script>
-        new Vue({
-            el: '#app',
-            data: {
-                votingActive: false,
-                timer: '',
-                votes: {},
-                weatherTypes: [],
-                blacklist: []
-            },
-            methods: {
-                handleMessage(event) {
-                    const { action, sound, votes, duration, weatherTypes, blacklist } = event.data;
-                    if (action === 'playSound') {
-                        this.playSound(sound);
-                    } else if (action === 'startVoting') {
-                        this.votingActive = true;
-                        this.votes = {};
-                        this.weatherTypes = weatherTypes;
-                        this.blacklist = blacklist;
-                        this.startTimer(duration * 60);
-                    } else if (action === 'updateVotes') {
-                        this.votes = votes;
-                    } else if (action === 'endVoting') {
-                        this.votingActive = false;
-                    }
-                },
-                playSound(soundFile) {
-                    const audio = new Audio(`./sounds/${soundFile}`);
-                    audio.volume = 0.5; // Adjust volume as needed
-                    audio.play();
-                },
-                startTimer(duration) {
-                    let timer = duration;
-                    const interval = setInterval(() => {
-                        const minutes = Math.floor(timer / 60);
-                        const seconds = timer % 60;
-                        this.timer = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-                        if (--timer < 0) {
-                            clearInterval(interval);
-                            this.votingActive = false;
-                        }
-                    }, 1000);
-                }
-            },
-            created() {
-                window.addEventListener('message', this.handleMessage);
-            },
-            beforeDestroy() {
-                window.removeEventListener('message', this.handleMessage);
+    const DEV_MODE = typeof window.invokeNative === 'undefined';
+    if (DEV_MODE) document.body.classList.add('dev-mode');
+
+    const DEV_STATE = {
+      weather:'THUNDER', season:'AUTUMN', region:'City', hours:21, minutes:15,
+      forecast:[
+        {weather:'RAIN',estimatedIn:'~30 min'},
+        {weather:'OVERCAST',estimatedIn:'~60 min'},
+        {weather:'CLOUDS',estimatedIn:'~90 min'},
+      ],
+      activeEvent:'STORM',
+      voting:{options:['RAIN','CLEAR','CLOUDS','THUNDER'],votes:{RAIN:5,CLEAR:3,CLOUDS:1,THUNDER:4},timeLeft:45},
+    };
+
+    const nuiPost = (cb,data={}) =>
+      fetch(`https://${window.location.hostname.replace(/^cfx-nui-/,'')}/${cb}`,{
+        method:'POST',headers:{'Content-Type':'application/json; charset=UTF-8'},body:JSON.stringify(data),
+      }).catch(()=>{});
+
+    const pad2 = n => String(Math.floor(n)).padStart(2,'0');
+
+    const WEATHER_ICONS = {
+      CLEAR:'☀️',EXTRASUNNY:'🌞',CLOUDS:'⛅',OVERCAST:'☁️',RAIN:'🌧️',
+      CLEARING:'🌤️',THUNDER:'⛈️',SMOG:'🌫️',FOGGY:'🌁',XMAS:'🎄',SNOWLIGHT:'🌨️',BLIZZARD:'🌬️',
+    };
+    const WEATHER_TINTS = {
+      CLEAR:'rgba(251,191,36,0.06)',EXTRASUNNY:'rgba(251,191,36,0.09)',CLOUDS:'rgba(148,163,184,0.04)',
+      OVERCAST:'rgba(100,116,139,0.05)',RAIN:'rgba(56,189,248,0.06)',CLEARING:'rgba(251,191,36,0.05)',
+      THUNDER:'rgba(139,92,246,0.08)',SMOG:'rgba(120,113,108,0.06)',FOGGY:'rgba(148,163,184,0.05)',
+      XMAS:'rgba(34,197,94,0.06)',SNOWLIGHT:'rgba(186,230,253,0.06)',BLIZZARD:'rgba(186,230,253,0.08)',
+    };
+    const WEATHER_ACCENTS = {
+      CLEAR:'#fbbf24',EXTRASUNNY:'#f59e0b',CLOUDS:'#94a3b8',OVERCAST:'#64748b',
+      RAIN:'#38bdf8',CLEARING:'#fbbf24',THUNDER:'#a78bfa',SMOG:'#78716c',
+      FOGGY:'#94a3b8',XMAS:'#22c55e',SNOWLIGHT:'#bae6fd',BLIZZARD:'#e0f2fe',
+    };
+    const WEATHER_TYPES = ['CLEAR','EXTRASUNNY','CLOUDS','OVERCAST','RAIN','CLEARING','THUNDER','SMOG','FOGGY','XMAS','SNOWLIGHT','BLIZZARD'];
+    const EXTREME_EVENTS = ['EARTHQUAKE','STORM','EXTREME_COLD','EXTREME_HEAT','TSUNAMI','METEOR_SHOWER','HURRICANE'];
+    const SEASONS = ['SPRING','SUMMER','AUTUMN','WINTER'];
+    const SEASON_COLORS = {SPRING:'#86efac',SUMMER:'#fde68a',AUTUMN:'#fb923c',WINTER:'#bfdbfe'};
+    const EVENT_META = {
+      EARTHQUAKE:{icon:'🌋',bg:'rgba(251,191,36,0.08)',border:'rgba(251,191,36,0.22)',color:'#fbbf24'},
+      STORM:{icon:'🌪️',bg:'rgba(167,139,250,0.08)',border:'rgba(167,139,250,0.22)',color:'#a78bfa'},
+      EXTREME_COLD:{icon:'🥶',bg:'rgba(34,211,238,0.08)',border:'rgba(34,211,238,0.22)',color:'#22d3ee'},
+      EXTREME_HEAT:{icon:'🔥',bg:'rgba(251,146,60,0.08)',border:'rgba(251,146,60,0.22)',color:'#fb923c'},
+      TSUNAMI:{icon:'🌊',bg:'rgba(56,189,248,0.08)',border:'rgba(56,189,248,0.22)',color:'#38bdf8'},
+      METEOR_SHOWER:{icon:'☄️',bg:'rgba(251,146,60,0.08)',border:'rgba(251,146,60,0.22)',color:'#fb923c'},
+      HURRICANE:{icon:'🌀',bg:'rgba(56,189,248,0.08)',border:'rgba(56,189,248,0.22)',color:'#38bdf8'},
+    };
+    const TABS = [
+      {id:'weather',label:'Weather',icon:'⛅'},{id:'time',label:'Time',icon:'◷'},
+      {id:'events',label:'Events',icon:'⚡'},{id:'voting',label:'Voting',icon:'◈'},
+      {id:'info',label:'Info',icon:'≡'},
+    ];
+
+    /* ── Player Panel ── */
+    function PlayerApp() {
+      const [visible,setVisible]=useState(DEV_MODE);
+      const [weather,setWeather]=useState(DEV_MODE?DEV_STATE.weather:'CLEAR');
+      const [season,setSeason]=useState(DEV_MODE?DEV_STATE.season:'SPRING');
+      const [region,setRegion]=useState(DEV_MODE?DEV_STATE.region:'Global');
+      const [time,setTime]=useState(DEV_MODE?{hours:DEV_STATE.hours,minutes:DEV_STATE.minutes}:{hours:12,minutes:0});
+      const [forecast,setForecast]=useState(DEV_MODE?DEV_STATE.forecast:[]);
+      const [activeEvent,setActiveEvent]=useState(DEV_MODE?DEV_STATE.activeEvent:null);
+      const [voting,setVoting]=useState(DEV_MODE?DEV_STATE.voting:null);
+      const timerRef=useRef(null);
+
+      useEffect(()=>{
+        const onMessage=({data})=>{
+          if(!data||!data.action)return;
+          switch(data.action){
+            case 'showPanel':
+              if(data.panel==='player')setVisible(true);
+              else if(data.panel==='none')setVisible(false);
+              break;
+            case 'fullSync':
+              if(data.weather)setWeather(data.weather);
+              if(data.season)setSeason(data.season);
+              if(data.region)setRegion(data.region);
+              if(data.hours!=null)setTime({hours:data.hours,minutes:data.minutes||0});
+              if(Array.isArray(data.forecast))setForecast(data.forecast);
+              setActiveEvent(data.activeEvent||null);
+              break;
+            case 'updateWeather':
+              if(data.weather)setWeather(data.weather);
+              if(data.region)setRegion(data.region);
+              if(data.season)setSeason(data.season);
+              break;
+            case 'updateSeason': if(data.season)setSeason(data.season); break;
+            case 'updateTime':
+              if(data.hours!=null)setTime({hours:data.hours,minutes:data.minutes||0});
+              break;
+            case 'updateForecast':
+              if(Array.isArray(data.forecast))setForecast(data.forecast);
+              break;
+            case 'activeEvent': setActiveEvent(data.event||null); break;
+            case 'startVoting':{
+              clearInterval(timerRef.current);
+              const totalSecs=(data.duration||1)*60;
+              setVoting({options:data.options||[],votes:{},timeLeft:totalSecs});
+              timerRef.current=setInterval(()=>{
+                setVoting(prev=>{
+                  if(!prev){clearInterval(timerRef.current);return null;}
+                  const next=prev.timeLeft-1;
+                  if(next<=0){clearInterval(timerRef.current);return null;}
+                  return{...prev,timeLeft:next};
+                });
+              },1000);
+              break;
             }
-        });
-    </script>
+            case 'updateVotes': setVoting(prev=>prev?{...prev,votes:data.votes||{}}:null); break;
+            case 'endVoting': clearInterval(timerRef.current);setVoting(null); break;
+            case 'playSound':
+              if(data.sound){const a=new Audio(`sounds/${data.sound}`);a.play().catch(()=>{});}
+              break;
+            default:break;
+          }
+        };
+        const onKeyDown=({key})=>{
+          if(key==='Escape'){setVisible(false);nuiPost('closePanel',{panel:'player'});}
+        };
+        window.addEventListener('message',onMessage);
+        window.addEventListener('keydown',onKeyDown);
+        return()=>{window.removeEventListener('message',onMessage);window.removeEventListener('keydown',onKeyDown);clearInterval(timerRef.current);};
+      },[]);
+
+      const closePanel=()=>{setVisible(false);nuiPost('closePanel',{panel:'player'});};
+      if(!visible)return null;
+
+      const seasonColor=SEASON_COLORS[season]||'#94a3b8';
+      const weatherTint=WEATHER_TINTS[weather]||'transparent';
+      const weatherAccent=WEATHER_ACCENTS[weather]||'rgba(255,255,255,0.2)';
+      const evtMeta=activeEvent?EVENT_META[activeEvent]:null;
+      const votes=voting?.votes||{};
+      const totalVotes=Object.values(votes).reduce((a,b)=>a+b,0);
+      const maxVotes=totalVotes>0?Math.max(...Object.values(votes)):0;
+
+      return (
+        <div className="player-panel panel-enter">
+          <div className="p-header" style={{background:weatherTint}}>
+            <button onClick={closePanel} className="p-close">✕</button>
+            <span className="p-weather-icon" style={{filter:`drop-shadow(0 0 10px ${weatherAccent})`}}>
+              {WEATHER_ICONS[weather]||'🌡️'}
+            </span>
+            <div className="p-weather-name">{weather}</div>
+            <div className="p-weather-meta">
+              <span className="p-region">{region} Region</span>
+              <div className="p-right-meta">
+                <span className="p-season" style={{color:seasonColor,borderColor:seasonColor}}>{season}</span>
+                <span className="p-time">{pad2(time.hours)}:{pad2(time.minutes)}</span>
+              </div>
+            </div>
+          </div>
+
+          {forecast.length>0&&(
+            <div className="p-section">
+              <div className="p-section-label">Forecast</div>
+              <div className="p-forecast-grid">
+                {forecast.map((entry,i)=>(
+                  <div key={i} className="p-fc-card">
+                    <span className="p-fc-icon">{WEATHER_ICONS[entry.weather]||'🌡️'}</span>
+                    <span className="p-fc-type">{entry.weather}</span>
+                    <span className="p-fc-eta">{entry.estimatedIn}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {evtMeta&&(
+            <div className="p-event" style={{background:evtMeta.bg,borderLeftColor:evtMeta.color,borderTopColor:evtMeta.border,color:evtMeta.color}}>
+              <span className="p-event-icon">{evtMeta.icon}</span>
+              <div>
+                <div className="p-event-name">{activeEvent.replace(/_/g,' ')}</div>
+                <div className="p-event-sub">Active Event</div>
+              </div>
+            </div>
+          )}
+
+          {voting&&(
+            <div className="p-section">
+              <div className="p-vote-header">
+                <div className="p-section-label" style={{marginBottom:0}}>Weather Vote</div>
+                <span className="p-vote-timer">{pad2(Math.floor(voting.timeLeft/60))}:{pad2(voting.timeLeft%60)}</span>
+              </div>
+              {voting.options.map(opt=>{
+                const count=votes[opt]||0;
+                const pct=totalVotes>0?(count/totalVotes)*100:0;
+                const isLeading=count>0&&count===maxVotes;
+                return(
+                  <div key={opt} className="p-vote-row">
+                    <span className="p-vote-name">{opt}</span>
+                    <div className="p-vote-track">
+                      <div className={`p-vote-fill${isLeading?' p-vote-fill-lead':''}`} style={{width:`${pct}%`}}/>
+                    </div>
+                    <span className="p-vote-count">{count}</span>
+                  </div>
+                );
+              })}
+              <div className="p-vote-hint">/weathervote &lt;type&gt;</div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    /* ── Admin Panel ── */
+    function AdminApp() {
+      const [visible,setVisible]=useState(DEV_MODE);
+      const [activeTab,setActiveTab]=useState('weather');
+      const [curWeather,setCurWeather]=useState(DEV_MODE?DEV_STATE.weather:'CLEAR');
+      const [curSeason,setCurSeason]=useState(DEV_MODE?DEV_STATE.season:'SPRING');
+      const [curTime,setCurTime]=useState(DEV_MODE?{hours:DEV_STATE.hours,minutes:DEV_STATE.minutes}:{hours:12,minutes:0});
+      const [activeEvent,setActiveEvent]=useState(DEV_MODE?DEV_STATE.activeEvent:null);
+      const [voteCounts,setVoteCounts]=useState(DEV_MODE?DEV_STATE.voting.votes:{});
+      const [selWeather,setSelWeather]=useState(DEV_MODE?DEV_STATE.weather:'CLEAR');
+      const [selRegion,setSelRegion]=useState('');
+      const [timeHour,setTimeHour]=useState(DEV_MODE?DEV_STATE.hours:12);
+      const [timeMin,setTimeMin]=useState(DEV_MODE?DEV_STATE.minutes:0);
+      const [selSeason,setSelSeason]=useState(DEV_MODE?DEV_STATE.season:'SPRING');
+
+      useEffect(()=>{
+        const onMessage=({data})=>{
+          if(!data||!data.action)return;
+          switch(data.action){
+            case 'showPanel':
+              if(data.panel==='admin')setVisible(true);
+              else if(data.panel==='none')setVisible(false);
+              break;
+            case 'fullSync':
+              if(data.weather){setCurWeather(data.weather);setSelWeather(data.weather);}
+              if(data.season){setCurSeason(data.season);setSelSeason(data.season);}
+              if(data.hours!=null){setCurTime({hours:data.hours,minutes:data.minutes||0});setTimeHour(data.hours);setTimeMin(data.minutes||0);}
+              setActiveEvent(data.activeEvent||null);
+              break;
+            case 'updateWeather': if(data.weather)setCurWeather(data.weather); break;
+            case 'updateSeason': if(data.season){setCurSeason(data.season);setSelSeason(data.season);} break;
+            case 'updateTime': if(data.hours!=null)setCurTime({hours:data.hours,minutes:data.minutes||0}); break;
+            case 'activeEvent': setActiveEvent(data.event||null); break;
+            case 'updateVotes': setVoteCounts(data.votes||{}); break;
+            case 'endVoting': setVoteCounts({}); break;
+            default:break;
+          }
+        };
+        const onKeyDown=({key})=>{
+          if(key==='Escape'){setVisible(false);nuiPost('closePanel',{panel:'admin'});}
+        };
+        window.addEventListener('message',onMessage);
+        window.addEventListener('keydown',onKeyDown);
+        return()=>{window.removeEventListener('message',onMessage);window.removeEventListener('keydown',onKeyDown);};
+      },[]);
+
+      const adminAction=useCallback(payload=>nuiPost('adminAction',payload),[]);
+      const closePanel=()=>{setVisible(false);nuiPost('closePanel',{panel:'admin'});};
+      if(!visible)return null;
+
+      return (
+        <div className="admin-panel admin-enter">
+          <div className="admin-header">
+            <div className="admin-title">
+              <span className="admin-title-text">Admin Panel</span>
+              <span className="admin-title-ver">v2.0.0</span>
+            </div>
+            <button onClick={closePanel} className="admin-close">✕</button>
+          </div>
+          <div className="tab-bar">
+            {TABS.map(t=>(
+              <button key={t.id} onClick={()=>setActiveTab(t.id)}
+                      className={`tab-btn${activeTab===t.id?' tab-active':''}`}>
+                <span className="tab-icon">{t.icon}</span>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="tab-content">
+            {activeTab==='weather'&&<WeatherTab curWeather={curWeather} selWeather={selWeather} setSelWeather={setSelWeather} selRegion={selRegion} setSelRegion={setSelRegion} onAction={adminAction}/>}
+            {activeTab==='time'&&<TimeTab curTime={curTime} timeHour={timeHour} setTimeHour={setTimeHour} timeMin={timeMin} setTimeMin={setTimeMin} onAction={adminAction}/>}
+            {activeTab==='events'&&<EventsTab activeEvent={activeEvent} onAction={adminAction}/>}
+            {activeTab==='voting'&&<VotingTab voteCounts={voteCounts} onAction={adminAction}/>}
+            {activeTab==='info'&&<InfoTab curWeather={curWeather} curSeason={curSeason} curTime={curTime} selSeason={selSeason} setSelSeason={setSelSeason} onAction={adminAction}/>}
+          </div>
+        </div>
+      );
+    }
+
+    function WeatherTab({curWeather,selWeather,setSelWeather,selRegion,setSelRegion,onAction}){
+      const REGIONS=['','City','Sandy','Paleto'];
+      return(
+        <div className="space-y-4">
+          <div className="info-row">
+            <span className="info-label">Current</span>
+            <span className="flex items-center gap-1">
+              <span className="text-sm">{WEATHER_ICONS[curWeather]||'🌡️'}</span>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:'0.08em',fontSize:'0.82rem',color:'rgba(255,255,255,0.88)',textTransform:'uppercase'}}>{curWeather}</span>
+            </span>
+          </div>
+          <div className="divider"/>
+          <div className="space-y-2">
+            <label className="field-label">Weather Type</label>
+            <select value={selWeather} onChange={e=>setSelWeather(e.target.value)} className="select-field">
+              {WEATHER_TYPES.map(w=><option key={w} value={w}>{w}</option>)}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="field-label">Region (optional)</label>
+            <select value={selRegion} onChange={e=>setSelRegion(e.target.value)} className="select-field">
+              {REGIONS.map(r=><option key={r} value={r}>{r===''?'Global — all regions':r}</option>)}
+            </select>
+          </div>
+          <button onClick={()=>onAction({action:'setWeather',weather:selWeather,region:selRegion||undefined})} className="action-btn">
+            {WEATHER_ICONS[selWeather]} Apply {selWeather}
+          </button>
+          <div className="divider"/>
+          <div className="space-y-2">
+            <label className="field-label">Weather Sync</label>
+            <div className="flex gap-2">
+              <button onClick={()=>onAction({action:'enableWeatherSync'})} className="action-btn-sm" style={{flex:1}}>Enable</button>
+              <button onClick={()=>onAction({action:'disableWeatherSync'})} className="action-btn-sm action-btn-danger" style={{flex:1}}>Disable</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function TimeTab({curTime,timeHour,setTimeHour,timeMin,setTimeMin,onAction}){
+      return(
+        <div className="space-y-4">
+          <div className="time-display-lg">{pad2(curTime.hours)}:{pad2(curTime.minutes)}</div>
+          <div className="space-y-2">
+            <label className="field-label">Hour — {pad2(timeHour)}</label>
+            <input type="range" min="0" max="23" value={timeHour} onChange={e=>setTimeHour(Number(e.target.value))} className="range-input"/>
+          </div>
+          <div className="space-y-2">
+            <label className="field-label">Minute — {pad2(timeMin)}</label>
+            <input type="range" min="0" max="59" value={timeMin} onChange={e=>setTimeMin(Number(e.target.value))} className="range-input"/>
+          </div>
+          <button onClick={()=>onAction({action:'setTime',hours:timeHour,minutes:timeMin})} className="action-btn">
+            Apply {pad2(timeHour)}:{pad2(timeMin)}
+          </button>
+          <div className="divider"/>
+          <div className="space-y-2">
+            <label className="field-label">Time Sync</label>
+            <div className="flex gap-2">
+              <button onClick={()=>onAction({action:'enableTimeSync'})} className="action-btn-sm" style={{flex:1}}>Enable</button>
+              <button onClick={()=>onAction({action:'disableTimeSync'})} className="action-btn-sm action-btn-danger" style={{flex:1}}>Disable</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function EventsTab({activeEvent,onAction}){
+      const evtMeta=activeEvent?EVENT_META[activeEvent]:null;
+      return(
+        <div className="space-y-4">
+          {evtMeta&&(
+            <div className="event-banner" style={{background:evtMeta.bg,borderColor:evtMeta.border,borderLeftColor:evtMeta.color,color:evtMeta.color}}>
+              <span style={{fontSize:'1rem'}}>{evtMeta.icon}</span>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:'0.1em',fontSize:'0.75rem',textTransform:'uppercase'}}>
+                Active: {activeEvent.replace(/_/g,' ')}
+              </span>
+            </div>
+          )}
+          <div className="space-y-2">
+            <label className="field-label">Blackout</label>
+            <div className="flex gap-2">
+              <button onClick={()=>onAction({action:'blackout'})} className="action-btn-sm" style={{flex:1}}>🔦 Trigger</button>
+              <button onClick={()=>onAction({action:'clearBlackout'})} className="action-btn-sm action-btn-danger" style={{flex:1}}>Clear</button>
+            </div>
+          </div>
+          <div className="divider"/>
+          <div className="space-y-2">
+            <label className="field-label">Extreme Events</label>
+            <div className="evt-grid">
+              {EXTREME_EVENTS.map(evt=>{
+                const m=EVENT_META[evt];
+                const isActive=activeEvent===evt;
+                return(
+                  <button key={evt} onClick={()=>onAction({action:'triggerEvent',event:evt})} className="evt-btn"
+                          style={{background:isActive?m.bg:'rgba(255,255,255,0.03)',borderColor:isActive?m.color:'rgba(255,255,255,0.08)',color:isActive?m.color:'rgba(255,255,255,0.55)'}}>
+                    <span className="evt-btn-icon">{m.icon}</span>
+                    {evt.replace(/_/g,' ')}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <button onClick={()=>onAction({action:'clearEvent'})} className="action-btn action-btn-danger">
+            Clear Active Event
+          </button>
+        </div>
+      );
+    }
+
+    function VotingTab({voteCounts,onAction}){
+      const entries=Object.entries(voteCounts);
+      const totalVotes=entries.reduce((s,[,v])=>s+v,0);
+      const sorted=[...entries].sort(([,a],[,b])=>b-a);
+      return(
+        <div className="space-y-4">
+          <button onClick={()=>onAction({action:'forceVote'})} className="action-btn">🗳 Force Vote Now</button>
+          <div className="divider"/>
+          {sorted.length>0?(
+            <div className="space-y-2">
+              <label className="field-label">Live Counts — {totalVotes} vote{totalVotes!==1?'s':''}</label>
+              {sorted.map(([w,c])=>{
+                const pct=totalVotes>0?(c/totalVotes)*100:0;
+                return(
+                  <div key={w} className="vote-row">
+                    <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'0.7rem',fontWeight:600,letterSpacing:'0.05em',textTransform:'uppercase',color:'rgba(255,255,255,0.55)',width:'6.5rem',flexShrink:0}}>{w}</span>
+                    <div className="vote-bar-bg"><div className="vote-bar-fill" style={{width:`${pct}%`}}/></div>
+                    <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:'0.62rem',color:'rgba(255,255,255,0.32)',width:'1.2rem',textAlign:'right',flexShrink:0}}>{c}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ):(
+            <div style={{textAlign:'center',padding:'1.5rem 0',fontSize:'0.72rem',color:'rgba(255,255,255,0.2)',fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:'0.1em',textTransform:'uppercase'}}>
+              No Active Vote
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    function InfoTab({curWeather,curSeason,curTime,selSeason,setSelSeason,onAction}){
+      const seasonColor=SEASON_COLORS[curSeason]||'#94a3b8';
+      return(
+        <div className="space-y-4">
+          <div className="space-y-2">
+            {[
+              {label:'Resource',value:'B2 Weather Essentials'},
+              {label:'Version',value:<span style={{fontFamily:"'JetBrains Mono',monospace"}}>2.0.0</span>},
+              {label:'Weather',value:<span className="flex items-center gap-1"><span>{WEATHER_ICONS[curWeather]||'🌡️'}</span><span>{curWeather}</span></span>},
+              {label:'Season',value:<span style={{color:seasonColor,fontWeight:600}}>{curSeason}</span>},
+              {label:'Time',value:<span style={{fontFamily:"'JetBrains Mono',monospace"}}>{pad2(curTime.hours)}:{pad2(curTime.minutes)}</span>},
+            ].map(({label,value})=>(
+              <div key={label} className="info-row">
+                <span className="info-label">{label}</span>
+                <span style={{fontSize:'0.78rem',color:'rgba(255,255,255,0.82)'}}>{value}</span>
+              </div>
+            ))}
+          </div>
+          <div className="divider"/>
+          <div className="space-y-2">
+            <label className="field-label">Override Season</label>
+            <select value={selSeason} onChange={e=>setSelSeason(e.target.value)} className="select-field">
+              {SEASONS.map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+            <button onClick={()=>onAction({action:'setSeason',season:selSeason})} className="action-btn">
+              Apply {selSeason}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('player-root')).render(<PlayerApp/>);
+    ReactDOM.createRoot(document.getElementById('admin-root')).render(<AdminApp/>);
+  </script>
 </body>
 </html>

@@ -1,0 +1,197 @@
+/* ============================================================
+   B2 Weather Essentials — NUI Stylesheet v2
+   Atmospheric dark HUD · Barlow Condensed + JetBrains Mono
+   ============================================================ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100vw; height: 100vh;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  font-family: 'Barlow', 'Segoe UI', system-ui, sans-serif;
+}
+
+@keyframes playerIn {
+  from { opacity: 0; transform: translateX(18px) scale(0.96); }
+  to   { opacity: 1; transform: translateX(0)   scale(1);    }
+}
+@keyframes adminIn {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0);    }
+}
+@keyframes eventGlow {
+  0%,100% { opacity: 1;    }
+  50%     { opacity: 0.66; }
+}
+@keyframes leadPulse {
+  0%,100% { filter: brightness(1);   }
+  50%     { filter: brightness(1.35);}
+}
+
+.panel-enter { animation: playerIn 0.28s cubic-bezier(0.34,1.56,0.64,1); }
+.admin-enter { animation: adminIn  0.26s cubic-bezier(0.22,1,0.36,1);    }
+
+/* ── Player Panel ── */
+.player-panel {
+  position: fixed; top: 1rem; right: 1rem; width: 292px;
+  background: rgba(5,8,17,0.94);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px; overflow: hidden; color: white; z-index: 40;
+  box-shadow: 0 0 0 1px rgba(34,211,238,0.05), 0 24px 48px rgba(0,0,0,0.7),
+              inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* ── Player Header ── */
+.p-header {
+  position: relative; padding: 1rem 0.9rem 0.8rem;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  transition: background 0.7s ease;
+}
+.p-close {
+  position: absolute; top: 0.7rem; right: 0.7rem;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  font-size: 0.58rem; color: rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 5px; cursor: pointer; transition: all 0.15s; line-height: 1;
+}
+.p-close:hover { color: white; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.14); }
+.p-weather-icon { font-size: 1.9rem; line-height: 1; margin-bottom: 0.45rem; display: block; }
+.p-weather-name {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 1.18rem; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: rgba(255,255,255,0.95); line-height: 1; margin-bottom: 0.45rem;
+}
+.p-weather-meta { display: flex; align-items: center; justify-content: space-between; }
+.p-region       { font-size: 0.67rem; color: rgba(255,255,255,0.36); letter-spacing: 0.04em; }
+.p-right-meta   { display: flex; align-items: center; gap: 0.45rem; }
+.p-season {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.58rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 1px 5px; border: 1px solid currentColor; border-radius: 3px; opacity: 0.85;
+}
+.p-time { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: rgba(255,255,255,0.46); }
+
+/* ── Player Sections ── */
+.p-section { padding: 0.65rem 0.9rem; border-top: 1px solid rgba(255,255,255,0.05); }
+.p-section-label {
+  font-family: 'Barlow Condensed', sans-serif;
+  font-size: 0.57rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.24); margin-bottom: 0.5rem;
+}
+
+/* ── Forecast Grid ── */
+.p-forecast-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.35rem; }
+.p-fc-card {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 9px; padding: 0.5rem 0.2rem 0.45rem;
+  display: flex; flex-direction: column; align-items: center; gap: 0.18rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.p-fc-card:hover { background: rgba(255,255,255,0.055); border-color: rgba(255,255,255,0.1); }
+.p-fc-icon { font-size: 1.18rem; line-height: 1; }
+.p-fc-type {
+  font-family: 'Barlow Condensed', sans-serif; font-size: 0.58rem; font-weight: 700;
+  letter-spacing: 0.08em; color: rgba(255,255,255,0.62); text-transform: uppercase; text-align: center;
+}
+.p-fc-eta { font-family: 'JetBrains Mono', monospace; font-size: 0.53rem; color: rgba(255,255,255,0.26); }
+
+/* ── Event Banner (player) ── */
+.p-event {
+  display: flex; align-items: center; gap: 0.65rem; padding: 0.65rem 0.9rem;
+  border-top: 1px solid rgba(255,255,255,0.04); border-left: 3px solid;
+  animation: eventGlow 1.9s ease-in-out infinite;
+}
+.p-event-icon    { font-size: 1.15rem; line-height: 1; flex-shrink: 0; }
+.p-event-name    { font-family:'Barlow Condensed',sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; line-height:1; margin-bottom:0.14rem; }
+.p-event-sub     { font-size:0.57rem; letter-spacing:0.09em; text-transform:uppercase; opacity:0.5; }
+
+/* ── Voting ── */
+.p-vote-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.p-vote-timer  { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: rgba(255,255,255,0.38); }
+.p-vote-row    { display: flex; align-items: center; gap: 0.38rem; margin-bottom: 0.3rem; }
+.p-vote-name   { font-family:'Barlow Condensed',sans-serif; font-size:0.66rem; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:rgba(255,255,255,0.5); width:5.5rem; flex-shrink:0; }
+.p-vote-track  { flex:1; height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+.p-vote-fill   { height:100%; background:linear-gradient(90deg,#22d3ee,#818cf8); border-radius:3px; transition:width 0.4s ease; min-width:2px; }
+.p-vote-fill-lead { background:linear-gradient(90deg,#34d399,#22d3ee); animation:leadPulse 2s ease-in-out infinite; }
+.p-vote-count  { font-family:'JetBrains Mono',monospace; font-size:0.6rem; color:rgba(255,255,255,0.3); width:1rem; text-align:right; flex-shrink:0; }
+.p-vote-hint   { font-size:0.57rem; color:rgba(255,255,255,0.17); margin-top:0.35rem; }
+
+/* ── Admin Panel ── */
+.admin-panel {
+  position: fixed; top:0; right:0; bottom:0; width:360px;
+  background: rgba(6,9,19,0.96);
+  border-left: 1px solid rgba(255,255,255,0.07);
+  color: white; z-index: 50; display:flex; flex-direction:column; overflow:hidden;
+  box-shadow: -24px 0 64px rgba(0,0,0,0.55);
+  font-family: 'Barlow','Segoe UI',system-ui,sans-serif;
+}
+
+/* ── Admin Header ── */
+.admin-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0.85rem 0.9rem; border-bottom:1px solid rgba(255,255,255,0.06);
+  flex-shrink:0; background:rgba(0,0,0,0.18);
+}
+.admin-title      { display:flex; align-items:baseline; gap:0.4rem; }
+.admin-title-text { font-family:'Barlow Condensed',sans-serif; font-size:0.78rem; font-weight:700; letter-spacing:0.18em; text-transform:uppercase; color:rgba(255,255,255,0.78); }
+.admin-title-ver  { font-family:'JetBrains Mono',monospace; font-size:0.56rem; color:rgba(255,255,255,0.22); }
+.admin-close { width:26px; height:26px; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:rgba(255,255,255,0.32); background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px; cursor:pointer; transition:all 0.15s; }
+.admin-close:hover { color:white; background:rgba(255,255,255,0.1); }
+
+/* ── Admin Tabs ── */
+.tab-bar { display:flex; gap:0.2rem; padding:0.5rem 0.75rem; border-bottom:1px solid rgba(255,255,255,0.06); flex-shrink:0; background:rgba(0,0,0,0.14); }
+.tab-btn { flex:1; padding:0.38rem 0.15rem; display:flex; flex-direction:column; align-items:center; gap:0.14rem; font-family:'Barlow Condensed',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.32); background:transparent; border:1px solid transparent; border-radius:7px; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
+.tab-icon { font-size:0.9rem; line-height:1; }
+.tab-btn:hover { color:rgba(255,255,255,0.62); background:rgba(255,255,255,0.04); }
+.tab-active    { color:#22d3ee !important; background:rgba(34,211,238,0.08) !important; border-color:rgba(34,211,238,0.14) !important; }
+
+/* ── Tab Content ── */
+.tab-content { flex:1; overflow-y:auto; padding:0.875rem; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,0.08) transparent; }
+.tab-content::-webkit-scrollbar { width:3px; }
+.tab-content::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:2px; }
+
+/* ── Admin Forms ── */
+.field-label { display:block; font-family:'Barlow Condensed',sans-serif; font-size:0.6rem; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:rgba(255,255,255,0.3); margin-bottom:0.35rem; }
+.select-field { width:100%; padding:0.45rem 0.7rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:8px; color:rgba(255,255,255,0.88); font-family:'Barlow',sans-serif; font-size:0.82rem; cursor:pointer; outline:none; transition:border-color 0.15s; appearance:none; -webkit-appearance:none; }
+.select-field:hover,.select-field:focus { border-color:rgba(34,211,238,0.3); }
+.select-field option { background:#090d1b; color:white; }
+.range-input { width:100%; height:5px; accent-color:#22d3ee; cursor:pointer; }
+
+/* ── Admin Buttons ── */
+.action-btn { display:block; width:100%; padding:0.55rem 0.875rem; background:rgba(34,211,238,0.07); border:1px solid rgba(34,211,238,0.18); border-radius:8px; color:#22d3ee; font-family:'Barlow Condensed',sans-serif; font-size:0.8rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all 0.15s; text-align:center; }
+.action-btn:hover { background:rgba(34,211,238,0.13); border-color:rgba(34,211,238,0.34); transform:translateY(-1px); }
+.action-btn:active { transform:translateY(0); }
+.action-btn-sm { display:block; padding:0.38rem 0.5rem; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); border-radius:7px; color:rgba(255,255,255,0.58); font-family:'Barlow Condensed',sans-serif; font-size:0.73rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:all 0.15s; text-align:center; white-space:nowrap; }
+.action-btn-sm:hover { background:rgba(255,255,255,0.08); border-color:rgba(255,255,255,0.16); color:white; }
+.action-btn-danger,.action-btn-sm.action-btn-danger { color:#f87171; background:rgba(248,113,113,0.06); border-color:rgba(248,113,113,0.16); }
+.action-btn-danger:hover,.action-btn-sm.action-btn-danger:hover { background:rgba(248,113,113,0.12); border-color:rgba(248,113,113,0.3); }
+
+/* ── Admin Info / Misc ── */
+.info-row    { display:flex; justify-content:space-between; align-items:center; padding:0.26rem 0; }
+.info-label  { font-size:0.72rem; color:rgba(255,255,255,0.33); }
+.divider     { height:1px; background:rgba(255,255,255,0.05); margin:0.65rem 0; }
+
+/* ── Admin Time Display ── */
+.time-display-lg { font-family:'JetBrains Mono',monospace; font-size:2.9rem; font-weight:400; color:rgba(255,255,255,0.9); text-align:center; letter-spacing:0.04em; padding:0.2rem 0 0.6rem; text-shadow:0 0 40px rgba(34,211,238,0.22); }
+
+/* ── Admin Event Grid ── */
+.evt-grid { display:grid; grid-template-columns:1fr 1fr; gap:0.4rem; }
+.evt-btn { display:flex; flex-direction:column; align-items:center; gap:0.22rem; padding:0.65rem 0.4rem; border-radius:9px; cursor:pointer; transition:all 0.15s; border:1px solid; font-family:'Barlow Condensed',sans-serif; font-size:0.66rem; font-weight:700; letter-spacing:0.09em; text-transform:uppercase; }
+.evt-btn:hover  { transform:translateY(-1px); filter:brightness(1.2); }
+.evt-btn:active { transform:translateY(0); }
+.evt-btn-icon   { font-size:1.3rem; line-height:1; }
+
+/* ── Admin Event Banner ── */
+.event-banner { display:flex; align-items:center; gap:0.55rem; padding:0.5rem 0.7rem; border:1px solid; border-left-width:3px; border-radius:8px; animation:eventGlow 2s ease-in-out infinite; }
+
+/* ── Admin Vote Bars ── */
+.vote-row      { display:flex; align-items:center; gap:0.4rem; margin-bottom:0.35rem; }
+.vote-bar-bg   { flex:1; height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+.vote-bar-fill { height:100%; background:linear-gradient(90deg,#22d3ee,#818cf8); border-radius:3px; transition:width 0.35s ease; min-width:2px; }
+
+/* ── Utility ── */
+.space-y-2 > * + * { margin-top:0.5rem;  }
+.space-y-3 > * + * { margin-top:0.75rem; }
+.space-y-4 > * + * { margin-top:1rem;    }
