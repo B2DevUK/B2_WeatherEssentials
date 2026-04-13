@@ -11,7 +11,7 @@
 --             all other server modules (resolved at runtime)
 -- ===============================================
 
-local RESOURCE_VERSION = "2.0.0"
+local RESOURCE_VERSION = "2.1.0"
 local GITHUB_API_URL   = "https://api.github.com/repos/B2DevUK/B2_WeatherEssentials/releases/latest"
 
 -- -----------------------------------------------
