@@ -21,7 +21,8 @@ server_scripts {
     'server/sv_extreme.lua',
     'server/sv_voting.lua',
     'server/sv_commands.lua',
-    'server/sv_exports.lua'
+    'server/sv_exports.lua',
+    'server/sv_bridge.lua',
 }
 
 client_scripts {
@@ -48,6 +49,10 @@ data_file 'WATER_FILE' 'flood_initial.xml'
 data_file 'WATER_FILE' 'water.xml'
 
 ui_page 'html/index.html'
+
+provide 'cd_easytime'
+provide 'qb-weathersync'
+provide 'vSync'
 
 export 'SetWeather'
 export 'GetCurrentWeather'
