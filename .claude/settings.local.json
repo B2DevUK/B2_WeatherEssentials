@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Brandon/Desktop/FiveM/txData/ESXLegacy_D0615E.base/resources/**)",
+      "WebFetch(domain:docs.lbscripts.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh api *)",
+      "Bash(python3 -c \"import sys,json; items=json.load\\(sys.stdin\\); [print\\(i['name'], i['type']\\) for i in items]\")",
+      "Bash(python3 -c \"import sys,json; data=json.load\\(sys.stdin\\); [print\\(i['path']\\) for i in data.get\\('tree',[]\\) if i['type']=='blob']\")",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//c/Users/Brandon/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/**)",
+      "Read(//c/Users/Brandon/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/**)",
+      "Bash(bash /c/Users/Brandon/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh --project-dir \"/c/Users/Brandon/Desktop/FiveM/txData/ESXLegacy_D0615E.base/resources/[PROJECTINDIGO]/b2cctv\")",
+      "Read(//c/c/Users/Brandon/Desktop/FiveM/txData/ESXLegacy_D0615E.base/resources/**)",
+      "Read(//c/Users/Brandon/AppData/Local/Temp/claude/c--Users-Brandon-Desktop-FiveM-txData-ESXLegacy-D0615E-base-resources--PROJECTINDIGO--B2-WeatherEssentials/e2bd91c5-a497-4cda-ae4c-7df74f75c798/tasks/**)",
+      "Bash(curl -s http://localhost:53020/)",
+      "Bash(curl -s http://localhost:53020/status)",
+      "Bash(node \"/c/Users/Brandon/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/server.cjs\" --help)",
+      "Read(//c/Users/Brandon/.claire/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/**)",
+      "Bash(sed -n '80,130p' \"/c/Users/Brandon/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.7/skills/brainstorming/scripts/start-server.sh\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:53020/)",
+      "PowerShell(Get-ChildItem -LiteralPath \"C:\\\\Users\\\\Brandon\\\\Desktop\\\\FiveM\\\\txData\\\\ESXLegacy_D0615E.base\\\\resources\\\\[PROJECTINDIGO]\\\\b2cctv\\\\.superpowers\\\\brainstorm\\\\22-1777652153\\\\content\" | ForEach-Object { $_.Name + \" \" + $_.Length })",
+      "Bash(mkdir -p \"c:/Users/Brandon/Desktop/FiveM/txData/ESXLegacy_D0615E.base/resources/[PROJECTINDIGO]/b2cctv/html/tablet/civilian/css\")",
+      "Bash(mkdir -p \"c:/Users/Brandon/Desktop/FiveM/txData/ESXLegacy_D0615E.base/resources/[PROJECTINDIGO]/b2cctv/html/tablet/civilian/js\")",
+      "Bash(ls html/)",
+      "Bash(ls html/tablet/)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\Brandon\\Desktop\\FiveM\\txData\\ESXLegacy_D0615E.base\\resources\\[PROJECTINDIGO]\\b2cctv\\docs\\superpowers",
+      "c:\\Users\\Brandon\\Desktop\\FiveM\\txData\\ESXLegacy_D0615E.base\\resources\\[PROJECTINDIGO]\\b2cctv\\html\\tablet\\police"
+    ]
+  }
+}

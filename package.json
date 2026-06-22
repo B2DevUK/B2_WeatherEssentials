@@ -1,0 +1,16 @@
+{
+  "name": "b2weatheressentials-ui",
+  "private": true,
+  "version": "1.0.0",
+  "description": "B2_WeatherEssentials NUI build (player panel + admin panel)",
+  "scripts": {
+    "build": "esbuild src/app.jsx --bundle --minify --jsx=transform --external:*.png --external:*.jpg --external:*.wav --outfile=html/app.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

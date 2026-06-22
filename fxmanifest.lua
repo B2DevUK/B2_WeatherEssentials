@@ -39,6 +39,7 @@ client_scripts {
 
 files {
     'html/index.html',
+    'html/app.js',
     'html/css/style.css',
     'html/sounds/*.wav',
     'water.xml',
